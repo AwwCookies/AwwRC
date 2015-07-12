@@ -46,21 +46,26 @@ class Channel:
             if self.flags.get('k'): # if a key is set
                 if key == self.flags.get('k'):
                     self.add_client(client)
+                    return True
                 elif key != None: # client gave a password but it was incorrect
                     client.writeline("Invalid password to join %s" % self.name)
                 else: # client did not give a password
                     client.writeline("You need a password to join  %s" % self.name)
             else: # if no key
                 self.add_client(client)
+                return True
         else:
             client.writeline("BANNED", "BANNED You are banned from this channel.")
 
-    def on_part(self, client):
+    def on_part(self, client, message):
         """
         Runs when a client leaves the channel
-        Currently does nothing
+        Removes the user from the channel is displays their
+        part message
         """
-        pass
+        del self.users[client.nick]
+        self.clients.remove(client)
+        self.writeline("%s left the channel: %s" % (client.nick, message))
 
     def on_quit(self, client):
         """

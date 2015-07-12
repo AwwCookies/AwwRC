@@ -20,11 +20,19 @@ class Server:
     '''
     def __init__(self):
         self.sock = None
-        self.thread_list = []
+        self.clients = []
         self.users = {}
         self.channels = self.load_channels()
         self.CONFIG = self.load_config()
         print self.CONFIG
+
+    def rehash(self, client):
+        """
+        Reloads the config and channels
+        """
+        if client.is_oper:
+            self.channels = self.load_channels()
+            self.CONFIG = self.load_config()
 
     def load_config(p="./config.json"):
         config = {}
@@ -40,6 +48,10 @@ class Server:
 
 
     def load_channels(self):
+        """
+        Looks in the channel folder for channel json files
+        and creates channels based of that information
+        """
         channels = {}
         for c in glob.glob("channels/*.json"):
             try:
@@ -65,6 +77,9 @@ class Server:
             if os.path.exists("motd.txt"):
                 for line in open("motd.txt", 'r').readlines():
                     client.writeline("MOTD " + line)
+            client.writeline("CONFIG %s" % json.dumps(self.CONFIG))
+            client.writeline("USERS There is %d %s connected." %
+                (len(self.users), "users" if len(self.users) > 1 else "user"))
             return True
 
     def register_account(self, client, email, hashedpw):
@@ -115,16 +130,6 @@ class Server:
             self.users[nick].on_whois(client)
         else:
             client.writeline("%s isn't on the server" % nick)
-
-    def client_join_chanel(self, client, channel, key):
-        if channel in self.channels.keys():
-            self.channels[channel].on_join(client, key)
-            return self.channels[channel]
-        else:
-            if self.CONFIG.get("CHANNEL_CREATION"):
-                self.create_channel(client, channel)
-            else:
-                client.writeline("This server does not allow the creation of channels")
 
 
     def create_channel(self, client, name, flags={}, topic=""):
@@ -200,18 +205,18 @@ class Server:
                 try:
                     client = Client(client_sock, self)
                     if self.register_client(client):
-                        self.thread_list.append(client)
+                        self.clients.append(client)
                         client.start()
                     # Go over the list of threads, remove those that have finished
                     # (their run method has finished running) and wait for them
                     # to fully finish
-                    for client in self.thread_list:
+                    for client in self.clients:
                         if not client.isAlive():
-                            self.thread_list.remove(client)
+                            self.clients.remove(client)
                             del self.users[client.nick]
                             thread.join()
-                except:
-                    print("Client error")
+                except Exception, err:
+                    print("Client error: %s" % err)
 
         except KeyboardInterrupt:
             print 'Ctrl+C pressed... Shutting Down'
@@ -225,7 +230,7 @@ class Server:
         #    calling join() with a timeout paramenter to detect if the thread
         #    did finish in the requested time
         #
-        for thread in self.thread_list:
-            thread.join(1.0)
+        for client in self.clients:
+            client.join(1.0)
         # Close the socket once we're done with it
         self.sock.close()

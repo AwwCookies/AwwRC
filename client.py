@@ -38,7 +38,7 @@ class Client(threading.Thread):
                 self.writeline("You are now known as %s" % nick)
                 print("%s is now known as %s" % (old_nick, nick))
             else:
-                client.writeline("%s is already in use. Please choose a new nick.")
+                client.writeline("%s is already in use. Please choose a new nick." % nick)
                 self.set_nick(client, client.readline())
         else:
             client.writeline("Your nick is too long. Please choose nick with less than %i chars")
@@ -75,14 +75,27 @@ class Client(threading.Thread):
                 self.message_nick(args[1], ' '.join(args[2:]))
             elif 'chanmsg' ==  args[0]:
                 self.message_channel(args[1], ' '.join(args[2:]))
+            elif 'channels' == args[0]:
+                self.writeline("You're in: %s" % self.channels.keys())
             elif 'oper?' == args[0]:
                 self.writeline("Oper: %s" % str(self.is_oper))
             elif 'whois' == args[0]:
                 self.server.client_whois(self, args[1])
             elif 'join' == args[0]:
-                chan = self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-                if chan:
-                    self.channels[chan.name] = chan
+                self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+            elif 'part' == args[0]:
+                self.part(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+            elif 'chanflag' == args[0]:
+                chan, nick, flag = (args[2], args[3], args[4])
+                if chan in self.channels.keys():
+                    if args[1] == "add":
+                        self.channels[chan].add_client_flag(self, nick, flag)
+                    elif args[1] == "remove":
+                        self.channels[chan].remove_client_flag(self, nick, flag)
+                else:
+                    self.writeline("You are not in %s" % chan)
+            elif 'flags' == args[0]:
+                self.writeline("FLAGS %s %s" % (self.nick, self.flags))
             #NOTE: Oper Commands
             elif 'oper' == args[0]:
                 self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
@@ -91,17 +104,18 @@ class Client(threading.Thread):
             elif 'sanick' == args[0]:
                 self.sanick(args[1], args[2])
             elif 'chanflag' == args[0]:
-                chan = args[1]
-                nick = args[2]
-                flag = args[3]
+                chan, nick, flag = (args[2], args[3], args[4])
                 if chan in self.channels.keys():
-                    self.channels[chan].add_client_flag(self, nick, flag)
+                    if args[1] == "add":
+                        self.channels[chan].add_client_flag(self, nick, flag)
+                    elif args[1] == "remove":
+                        self.channels[chan].remove_client_flag(self, nick, flag)
                 else:
                     self.writeline("You are not in %s" % chan)
-
             elif 'flags' == args[0]:
                 self.writeline("FLAGS %s %s" % (self.nick, self.flags))
-
+            elif 'ban' == args[0]:
+                self.ban_ip(args[1])
             else:
                 self.writeline("%s: invalid command" % args[0])
 
@@ -151,11 +165,39 @@ class Client(threading.Thread):
         else:
             self.writeline("Invalid credentials")
 
+
     def join(self, channel, key=None):
         """
-        Joins the client to a channel
+        Joins the client to a channel on the server
+        if CHANNEL_CREATION is False the client
+        can only join channels that are already made.
+        if CHANNEL_CREATION is True the client can
+        join premade channels as well as create new
+        channels.
         """
-        return self.server.client_join_chanel(self, channel, key)
+        if channel in self.server.channels.keys():
+            if channel not in self.channels:
+                if self.server.channels[channel].on_join(self, key):
+                    self.channels[channel] = self.server.channels[channel]
+            else:
+                self.writeline("You're already in %s" % channel)
+        else:
+            if self.server.CONFIG.get("CHANNEL_CREATION"):
+                self.server.create_channel(self, channel)
+                self.channels[channel] = self.server.channels[channel]
+            else:
+                self.writeline("This server does not allow the creation of channels")
+
+    def part(self, channel, message="bye"):
+        """
+        Make the client leave the channel
+        """
+        if channel in self.channels:
+            self.channels[channel].on_part(self, message)
+            del self.channels[channel]
+            self.writeline("You left %s (%s)" % (channel, message))
+        else:
+            self.writeline("You are not in %s" % channel)
 
     def quit(self):
         """
@@ -213,3 +255,10 @@ class Client(threading.Thread):
             self.server.users[new_nick] = self.server.users[nick]
             self.writeline("You changed %s nick to %s" % (nick, new_nick))
             print("%s changed %s's nick to %s" % (self.nick, nick, new_nick))
+
+    def ban_ip(self, ip):
+        """
+        Adds an ip to the banlist.txt
+        """
+        self.server.ban_ip(self, ip)
+        self.writeline("Banned %s from the server" % ip)
