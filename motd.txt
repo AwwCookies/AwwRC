@@ -1,0 +1,11 @@
+    _                     ____   ____
+   / \__      ____      _|  _ \ / ___|
+  / _ \ \ /\ / /\ \ /\ / / |_) | |
+ / ___ \ V  V /  \ V  V /|  _ <| |___
+/_/   \_\_/\_/    \_/\_/ |_| \_\\____|
+Welcome to AwwRC
+This is a sample MOTD
+Admins: Aww
+
+Rules:
+    1. There are no rules. Fuck the world 2pac swag yolo.

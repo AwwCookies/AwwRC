@@ -1,0 +1,6 @@
+{
+    "PORT": 5050,
+    "ADDRESS": "smile.sh",
+    "TIMEOUT": 0.5,
+    "MAX_NICK_LENGTH": 12
+}
