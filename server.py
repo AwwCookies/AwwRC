@@ -34,6 +34,7 @@ class Server:
             "TIMEOUT": tconfig["TIMEOUT"] if tconfig.get("TIMEOUT") else 0.5,
             "ADDRESS": tconfig["ADDRESS"] if tconfig.get("ADDRESS") else "127.0.0.1",
             "MAX_NICK_LENGTH": tconfig["MAX_NICK_LENGTH"] if tconfig.get("MAX_NICK_LENGTH") else 12,
+            "CHANNEL_CREATION": tconfig["CHANNEL_CREATION"] if tconfig.get("CHANNEL_CREATION") else False,
         }
         return config
 
@@ -120,14 +121,23 @@ class Server:
             self.channels[channel].on_join(client, key)
             return self.channels[channel]
         else:
-            client.writeline("%s is not valid channel name" % channel)
+            if self.CONFIG.get("CHANNEL_CREATION"):
+                self.create_channel(client, channel)
+            else:
+                client.writeline("This server does not allow the creation of channels")
 
 
-    def create_channel(self, client, name, flags=[], topic=""):
+    def create_channel(self, client, name, flags={}, topic=""):
         if name not in self.channels.keys():
             self.channels[name] = Channel(name, flags, topic)
+            print self.channels
         else:
             client.writeline("Channel %s is already created" % name)
+
+
+    def ban_ip(self, client, ip):
+        if client.is_oper:
+            pass
 
 
     def run(self):
@@ -174,11 +184,10 @@ class Server:
         try:
             while True:
                 try:
-                    self.sock.settimeout(0.500)
+                    self.sock.settimeout(0.5) # .5 second timeout
                     client_sock = self.sock.accept()[0]
                 except socket.timeout:
                     # No connection detected, sleep for one second, then check
-                    # if the global QUIT flag has been set
                     time.sleep(1)
                     continue
                 # Create the Client object and let it handle the incoming

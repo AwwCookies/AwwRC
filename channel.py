@@ -69,6 +69,11 @@ class Channel:
         """
         pass
 
+    def kick_user(self, client, nick):
+        if nick in self.users.keys():
+            if is_op(client):
+                pass
+
     def on_message(self, client, message):
         """
         Runs when a user sends a message to the channel
@@ -81,7 +86,7 @@ class Channel:
         if client.ip in self.banlist: # if the user is banned
             client.writeline("You are banned from %s" % self.name)
         else:
-            if self.flags["n"]: # if flag 'n' is set
+            if self.flags.get("n"): # if flag 'n' is set
                 if client in self.clients:
                     self.writeline("CHANMSG %s %s %s" % (self.name, client.nick, message))
                 else:
