@@ -23,7 +23,6 @@ class Channel:
         client.writeline("USERS %s" % str(' '.join([user.nick for user in self.clients])))
 
     def on_join(self, client, key=None):
-        print key
         """
         Runs when a client joins the channel
         Sends the client the topic
@@ -32,6 +31,7 @@ class Channel:
         to join the channel and they will recv a banned
         message from the channel
         """
+        print("%s joined %s" % (client.nick, self.name))
         if client.ip not in self.banlist:
             # if self.flags.get('l'): # Channel Limit
             #     print len(self.clients) > self.flags.get('l')

@@ -32,8 +32,11 @@ class Client(threading.Thread):
         #TODO: add nick restrictions
         if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
             if nick not in self.server.users.keys():
+                old_nick = client.nick
                 client.nick = nick
                 self.server.users[client.nick] = self
+                self.writeline("You are now known as %s" % nick)
+                print("%s is now known as %s" % (old_nick, nick))
             else:
                 client.writeline("%s is already in use. Please choose a new nick.")
                 self.set_nick(client, client.readline())
@@ -74,6 +77,8 @@ class Client(threading.Thread):
                 self.message_channel(args[1], ' '.join(args[2:]))
             elif 'oper?' == args[0]:
                 self.writeline("Oper: %s" % str(self.is_oper))
+            elif 'whois' == args[0]:
+                self.server.client_whois(self, args[1])
             elif 'join' == args[0]:
                 chan = self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
                 if chan:
@@ -83,6 +88,8 @@ class Client(threading.Thread):
                 self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
             elif 'kill' == args[0]:
                 self.kill(args[1])
+            elif 'sanick' == args[0]:
+                self.sanick(args[1], args[2])
             elif 'chanflag' == args[0]:
                 chan = args[1]
                 nick = args[2]
@@ -139,6 +146,8 @@ class Client(threading.Thread):
         """
         if self.server.oper(self, hashedpw):
             self.is_oper = True
+            self.writeline("You are not an oper!")
+            print("%s oppered" % self.nick)
         else:
             self.writeline("Invalid credentials")
 
@@ -162,6 +171,22 @@ class Client(threading.Thread):
         self.writeline("KILLED %s" % message)
         self.quit()
 
+    def on_sanick(self, new_nick):
+        """
+        Runs when a oper uses sanick on this client
+        """
+        self.writeline("Your nick was changed by a server admin to %s" % new_nick)
+
+    def on_whois(self, client):
+        """
+        Runs when a user uses the whois command on this client
+        """
+        client.writeline("WHOIS %s Nick: %s" % (self.nick, self.nick))
+        client.writeline("WHOIS %s Oper: %s" % (self.nick, self.is_oper))
+        client.writeline("WHOIS %s Logged In: %s" % (self.nick, bool(self.logged_in())))
+        if self.logged_in():
+            client.writeline("WHOIS %s Account UUID: %s" % (self.nick, self.account["uuid"]))
+
     ##### Oper Commands #####
     def kill(self, nick):
         """
@@ -171,7 +196,20 @@ class Client(threading.Thread):
         if self.is_oper:
             if nick in self.server.users.keys():
                 self.server.users[nick].on_kill("You were killed.")
+                self.writeline("You killed %s" % nick)
+                print("%s killed %s" % (self.nick, nick))
             else:
                 self.writeline("%s isn't on the server." % nick)
         else:
             self.writeline("ERROR You need to be an oper to use this command")
+
+    def sanick(self, nick, new_nick):
+        """
+        Force a user to change their nick
+        """
+        if self.server.users.get(nick):
+            self.server.users[nick].nick = new_nick
+            self.server.users[nick].on_sanick(new_nick)
+            self.server.users[new_nick] = self.server.users[nick]
+            self.writeline("You changed %s nick to %s" % (nick, new_nick))
+            print("%s changed %s's nick to %s" % (self.nick, nick, new_nick))

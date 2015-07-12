@@ -109,6 +109,12 @@ class Server:
                 return True
 
 
+    def client_whois(self, client, nick):
+        if self.users.get(nick):
+            self.users[nick].on_whois(client)
+        else:
+            client.writeline("%s isn't on the server" % nick)
+
     def client_join_chanel(self, client, channel, key):
         if channel in self.channels.keys():
             self.channels[channel].on_join(client, key)
