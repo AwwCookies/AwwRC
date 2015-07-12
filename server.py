@@ -136,8 +136,13 @@ class Server:
 
 
     def ban_ip(self, client, ip):
+        """
+        Ban a ip from joining the server
+        """
         if client.is_oper:
-            pass
+            with open("banlist.txt", 'a') as f:
+                f.write(ip + "\n")
+            print("Added %s to banlist.txt" % ip)
 
 
     def run(self):
