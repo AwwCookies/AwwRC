@@ -1,6 +1,6 @@
 {
     "PORT": 5050,
-    "ADDRESS": "smile.sh",
+    "ADDRESS": "127.0.0.1",
     "TIMEOUT": 0.5,
     "MAX_NICK_LENGTH": 12
 }

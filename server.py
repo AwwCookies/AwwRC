@@ -112,13 +112,16 @@ class Server:
     def client_join_chanel(self, client, channel, key):
         if channel in self.channels.keys():
             self.channels[channel].on_join(client, key)
+            return self.channels[channel]
         else:
             client.writeline("%s is not valid channel name" % channel)
 
 
-    def create_channel(self, client, name):
+    def create_channel(self, client, name, flags=[], topic=""):
         if name not in self.channels.keys():
             self.channels[name] = Channel(name, flags, topic)
+        else:
+            client.writeline("Channel %s is already created" % name)
 
 
     def run(self):

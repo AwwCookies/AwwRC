@@ -21,8 +21,9 @@ class Client(threading.Thread):
         self.ip = self.client.getpeername()[0] # Get the clients IP address
         self.nick = uuid.uuid4()
         self.is_oper = False
-        self.channels = []
+        self.channels = {}
         self.account = None
+        self.flags = []
 
     def set_nick(self, client, nick):
         """
@@ -39,6 +40,9 @@ class Client(threading.Thread):
         else:
             client.writeline("Your nick is too long. Please choose nick with less than %i chars")
             self.set_nick(client, client.readline())
+
+    def logged_in(self):
+        return self.account
 
     def run(self):
         '''
@@ -71,12 +75,25 @@ class Client(threading.Thread):
             elif 'oper?' == args[0]:
                 self.writeline("Oper: %s" % str(self.is_oper))
             elif 'join' == args[0]:
-                self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+                chan = self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+                if chan:
+                    self.channels[chan.name] = chan
             #NOTE: Oper Commands
             elif 'oper' == args[0]:
                 self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
             elif 'kill' == args[0]:
                 self.kill(args[1])
+            elif 'chanflag' == args[0]:
+                chan = args[1]
+                nick = args[2]
+                flag = args[3]
+                if chan in self.channels.keys():
+                    self.channels[chan].add_client_flag(self, nick, flag)
+                else:
+                    self.writeline("You are not in %s" % chan)
+
+            elif 'flags' == args[0]:
+                self.writeline("FLAGS %s %s" % (self.nick, self.flags))
 
             else:
                 self.writeline("%s: invalid command" % args[0])
@@ -129,7 +146,7 @@ class Client(threading.Thread):
         """
         Joins the client to a channel
         """
-        self.server.client_join_chanel(self, channel, key)
+        return self.server.client_join_chanel(self, channel, key)
 
     def quit(self):
         """

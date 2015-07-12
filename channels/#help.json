@@ -3,7 +3,8 @@
     "topic": "Welcome to #help!",
     "flags": {
         "n": true,
-        "k": "cookies"
+        "k": "cookies",
+        "l": -1
     },
     "banlist": [],
     "ops": [
