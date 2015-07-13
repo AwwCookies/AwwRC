@@ -125,16 +125,23 @@ class Channel:
     def is_op(self, client):
         """
         Checks to see if the client is an operator
+        Returns True if: client's uuid is in the channel file - Must be logged in
+        Returns True if: client has the o flag
+        Returns True if: client is a server admin
         """
         if client.logged_in():
-            return client.account["uuid"] in self.ops or self.name + "|o" in client.flags
+            return client.account["uuid"] in self.ops or self.name + "|o" in client.flags or client.is_oper
+        else:
+            return client.is_oper or self.name + "|o" in client.flags
 
     def is_owner(self, client):
         """
         Chekcs to see if the client is an owner of the channel
         """
         if client.logged_in():
-            return client.account["uuid"] in self.owner
+            return client.account["uuid"] in self.owner or client.is_oper
+        else:
+            return client.is_oper
 
     def add_op(self, client, users_uuid):
         """
@@ -161,6 +168,8 @@ class Channel:
             if nick in self.users:
                 self.users[nick].flags.append(self.name + "|" + flag)
                 client.writeline("You gave %s %s" % (nick, flag))
+                self.writeline("CHANMODE + %s %s gave %s to %s" % (
+                    self.name, client.nick, flag, nick))
             else:
                 client.writeline("ERROR %s is not in %s" % (nick, self.name))
         else:
@@ -177,6 +186,8 @@ class Channel:
             if nick in self.clients:
                 self.users[nick].flags.remove(self.name + "|" + flag)
                 client.writeline("You removed %s's flag %s" % (nick, flag))
+                self.writeline("CHANMODE - %s %s removed %s from %s" % (
+                    self.name, client.nick, flag, nick))
             else:
                 client.writeline("ERROR %s is not in %s" % (nick, self.name))
         else:

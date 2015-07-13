@@ -90,15 +90,6 @@ class Client(threading.Thread):
                 self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
             elif 'part' == args[0]:
                 self.part(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-            elif 'chanflag' == args[0]:
-                chan, nick, flag = (args[2], args[3], args[4])
-                if chan in self.channels.keys():
-                    if args[1] == "add":
-                        self.channels[chan].add_client_flag(self, nick, flag)
-                    elif args[1] == "remove":
-                        self.channels[chan].remove_client_flag(self, nick, flag)
-                else:
-                    self.writeline("You are not in %s" % chan)
             elif 'flags' == args[0]:
                 self.writeline("FLAGS %s %s" % (self.nick, self.flags))
             #NOTE: Oper Commands
@@ -113,7 +104,9 @@ class Client(threading.Thread):
             elif 'sapart' == args[0]:
                 self.sapart(args[1], args[2])
             elif 'chanflag' == args[0]:
-                chan, nick, flag = (args[2], args[3], args[4])
+                chan = args[2]
+                nick = args[3]
+                flag = args[4]
                 if chan in self.channels.keys():
                     if args[1] == "add":
                         self.channels[chan].add_client_flag(self, nick, flag)
@@ -169,7 +162,7 @@ class Client(threading.Thread):
         """
         if self.server.oper(self, hashedpw):
             self.is_oper = True
-            self.writeline("You are not an oper!")
+            self.writeline("You are now an oper!")
             print("%s oppered" % self.nick)
         else:
             self.writeline("Invalid credentials")
@@ -246,7 +239,18 @@ class Client(threading.Thread):
             client.writeline("WHOIS %s Account UUID: %s" % (self.nick, self.account["uuid"]))
 
     def on_sajoin(self, channel):
+        """
+        Runs when a server admin forces you into a channel
+        """
+        self.channels[channel] = self.server.channels[channel]
         self.writeline("YOUSAJOIN you were forced to join %s" % channel)
+
+    def on_sapart(self, channel):
+        """
+        Runs when a server admin forces you to leave a channel
+        """
+        del self.channels[channel]
+        self.writeline("YOUSAPART you were forced to leave %s" % channel)
 
     ##### Oper Commands #####
     def kill(self, nick):
@@ -287,7 +291,6 @@ class Client(threading.Thread):
             if channel in self.server.channels:
                 if nick in self.server.users:
                     self.server.channels[channel].add_client(self.server.users[nick])
-                    self.channels[channel] = self.server.channels[channel]
                     self.server.users[nick].on_sajoin(channel)
                     self.writeline("%s was forced to join %s" % (nick, channel))
                 else:
@@ -302,7 +305,15 @@ class Client(threading.Thread):
         Force a user to leave (part) a channel
         """
         if self.is_oper:
-            pass
+            if nick in self.server.users:
+                if channel in self.server.channels:
+                    self.server.channels[channel].on_part(self.server.users[nick], "sapart")
+                    self.server.users[nick].on_sapart(channel)
+                    self.writeline("You forced %s to leave %s" % (nick, channel))
+                else:
+                    self.writeline("%s doesn't exist" % channel)
+            else:
+                self.writeline("%s isn't on the server" % nick)
         else:
             self.writeline("ERROR You need to be an oper to use this command")
 
