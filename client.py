@@ -41,7 +41,8 @@ class Client(threading.Thread):
                 client.writeline("%s is already in use. Please choose a new nick." % nick)
                 self.set_nick(client, client.readline())
         else:
-            client.writeline("Your nick is too long. Please choose nick with less than %i chars")
+            client.writeline("Your nick is too long. Please choose nick with less than %i chars" %
+                self.server.CONFIG["MAX_NICK_LENGTH"])
             self.set_nick(client, client.readline())
 
     def logged_in(self):
@@ -56,14 +57,13 @@ class Client(threading.Thread):
         self.writeline("Please pick a nick")
         self.set_nick(self, self.readline())
         # Need to declare QUIT as global, since the method can change it
-        done = False
         cmd = self.readline()
         # Read data from the socket and process it
-        while not done:
+        while True:
             args = cmd.split(" ")
             if 'quit' == cmd:
                 self.writeline('Ok, bye')
-                done = True
+                return
             elif 'nick' == cmd:
                 self.writeline("Your nick is: %s" % self.nick)
             elif 'register' == args[0]:
@@ -71,6 +71,11 @@ class Client(threading.Thread):
                     hashlib.md5(' '.join(args[2:])).hexdigest())
             elif 'login' == args[0]:
                 self.server.client_login(self, hashlib.md5(' '.join(args[1:])).hexdigest())
+            elif 'kick' == args[0]:
+                if args[1] in self.channels:
+                    self.channels[args[1]].kick_user(self, args[2], ' '.join(args[3:]))
+                else:
+                    self.writeline("You are not in %s" % args[1])
             elif 'msg' == args[0]:
                 self.message_nick(args[1], ' '.join(args[2:]))
             elif 'chanmsg' ==  args[0]:
@@ -103,6 +108,10 @@ class Client(threading.Thread):
                 self.kill(args[1])
             elif 'sanick' == args[0]:
                 self.sanick(args[1], args[2])
+            elif 'sajoin' == args[0]:
+                self.sajoin(args[1], args[2])
+            elif 'sapart' == args[0]:
+                self.sapart(args[1], args[2])
             elif 'chanflag' == args[0]:
                 chan, nick, flag = (args[2], args[3], args[4])
                 if chan in self.channels.keys():
@@ -127,11 +136,11 @@ class Client(threading.Thread):
 
     def readline(self):
         '''
-        Helper function, reads up to 1024 chars from the socket, and returns
+        Helper function, reads up to MAX_RECV_SIZE chars from the socket, and returns
         them as a string, all letters in lowercase, and without any end of line
         markers '''
-        result = self.client.recv(1024)
-        if(None != result):
+        result = self.client.recv(self.server.CONFIG["MAX_RECV_SIZE"])
+        if(result != None):
             result = result.strip().lower()
         return result
 
@@ -175,7 +184,7 @@ class Client(threading.Thread):
         join premade channels as well as create new
         channels.
         """
-        if channel in self.server.channels.keys():
+        if channel in self.server.channels:
             if channel not in self.channels:
                 if self.server.channels[channel].on_join(self, key):
                     self.channels[channel] = self.server.channels[channel]
@@ -213,6 +222,13 @@ class Client(threading.Thread):
         self.writeline("KILLED %s" % message)
         self.quit()
 
+    def on_kick(self, channel, reason):
+        """
+        Runs when you've been kicked from a channel
+        """
+        del self.channels[channel.name]
+        self.writeline("YOURKICK You've been kicked from %s: %s" % (channel.name, reason))
+
     def on_sanick(self, new_nick):
         """
         Runs when a oper uses sanick on this client
@@ -228,6 +244,9 @@ class Client(threading.Thread):
         client.writeline("WHOIS %s Logged In: %s" % (self.nick, bool(self.logged_in())))
         if self.logged_in():
             client.writeline("WHOIS %s Account UUID: %s" % (self.nick, self.account["uuid"]))
+
+    def on_sajoin(self, channel):
+        self.writeline("YOUSAJOIN you were forced to join %s" % channel)
 
     ##### Oper Commands #####
     def kill(self, nick):
@@ -249,16 +268,50 @@ class Client(threading.Thread):
         """
         Force a user to change their nick
         """
-        if self.server.users.get(nick):
-            self.server.users[nick].nick = new_nick
-            self.server.users[nick].on_sanick(new_nick)
-            self.server.users[new_nick] = self.server.users[nick]
-            self.writeline("You changed %s nick to %s" % (nick, new_nick))
-            print("%s changed %s's nick to %s" % (self.nick, nick, new_nick))
+        if self.is_oper:
+            if self.server.users.get(nick):
+                self.server.users[nick].nick = new_nick
+                self.server.users[nick].on_sanick(new_nick)
+                self.server.users[new_nick] = self.server.users[nick]
+                self.writeline("You changed %s nick to %s" % (nick, new_nick))
+                print("%s changed %s's nick to %s" % (self.nick, nick, new_nick))
+        else:
+            self.writeline("ERROR You need to be an oper to use this command")
+
+    def sajoin(self, nick, channel):
+        """
+        Force a user to join a channel
+        this will bypass all restrictions
+        """
+        if self.is_oper:
+            if channel in self.server.channels:
+                if nick in self.server.users:
+                    self.server.channels[channel].add_client(self.server.users[nick])
+                    self.channels[channel] = self.server.channels[channel]
+                    self.server.users[nick].on_sajoin(channel)
+                    self.writeline("%s was forced to join %s" % (nick, channel))
+                else:
+                    self.writeline("%s isn't on the server" % nick)
+            else:
+                self.writeline("%s doesn't exist" % channel)
+        else:
+            self.writeline("ERROR You need to be an oper to use this command")
+
+    def sapart(self, nick, channel):
+        """
+        Force a user to leave (part) a channel
+        """
+        if self.is_oper:
+            pass
+        else:
+            self.writeline("ERROR You need to be an oper to use this command")
 
     def ban_ip(self, ip):
         """
         Adds an ip to the banlist.txt
         """
-        self.server.ban_ip(self, ip)
-        self.writeline("Banned %s from the server" % ip)
+        if self.is_oper:
+            self.server.ban_ip(self, ip)
+            self.writeline("Banned %s from the server" % ip)
+        else:
+            self.writeline("ERROR You need to be an oper to use this command")

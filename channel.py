@@ -3,7 +3,8 @@ class Channel:
     flags:
         n = No outside message
         k = key e.g password
-        l = number of clients limit
+        l = limit the amount of users
+        O = server operators only
     """
     def __init__(self, name, flags={}, topic="", banlist=[], ops=[], owner=""):
         self.name = name
@@ -20,7 +21,7 @@ class Channel:
         self.users[client.nick] = client
         self.writeline("JOIN %s %s has joined the channel" % (self.name, client.nick))
         client.writeline("TOPIC %s %s" % (self.name, self.topic))
-        client.writeline("USERS %s" % str(' '.join([user.nick for user in self.clients])))
+        client.writeline("USERS %s %s" % (self.name, str(' '.join([user.nick for user in self.clients]))))
 
     def on_join(self, client, key=None):
         """
@@ -33,27 +34,28 @@ class Channel:
         """
         print("%s joined %s" % (client.nick, self.name))
         if client.ip not in self.banlist:
-            # if self.flags.get('l'): # Channel Limit
-            #     print len(self.clients) > self.flags.get('l')
-            #     if len(self.clients) > self.flags.get('l'): # excecced limit
-            #         client.writeline("Channel %s is full" % self.name)
-            #         return
-            #     else: # within limit
-            #         self.add_client(client)
-            # else: # if no limit
-            #     self.add_client(client)
-
-            if self.flags.get('k'): # if a key is set
-                if key == self.flags.get('k'):
+            if self.flags.get('O'):
+                if client.is_oper:
                     self.add_client(client)
                     return True
-                elif key != None: # client gave a password but it was incorrect
-                    client.writeline("Invalid password to join %s" % self.name)
-                else: # client did not give a password
-                    client.writeline("You need a password to join  %s" % self.name)
-            else: # if no key
-                self.add_client(client)
-                return True
+                else:
+                    client.writeline("You must be an oper to join %s" % self.name)
+            elif self.flags.get('k'): # if a key is set
+                    if key == self.flags.get('k'):
+                        self.add_client(client)
+                        return True
+                    elif key != None: # client gave a password but it was incorrect
+                        client.writeline("Invalid password to join %s" % self.name)
+                    else: # client did not give a password
+                        client.writeline("You need a password to join  %s" % self.name)
+            elif self.flags.get('l'): # Channel Limit
+                print len(self.clients) > self.flags.get('l')
+                if len(self.clients) > self.flags.get('l'): # excecced limit
+                    client.writeline("Channel %s is full" % self.name)
+                    return True
+                else: # if no limit or within
+                    self.add_client(client)
+                    return True
         else:
             client.writeline("BANNED", "BANNED You are banned from this channel.")
 
@@ -74,10 +76,24 @@ class Channel:
         """
         pass
 
-    def kick_user(self, client, nick):
+    def kick_user(self, client, nick, reason):
+        """
+        Removes a user from the channel
+        client: operator that is kicking
+        nick: user to be kicked
+        reason: reason for the kick
+        """
         if nick in self.users.keys():
-            if is_op(client):
-                pass
+            if self.is_op(client):
+                self.users[nick].on_kick(self, reason)
+                self.clients.remove(self.users[nick])
+                del self.users[nick]
+                client.writeline("KICK %s You kicked %s from %s: %s" % (
+                    self.name, nick, self.name, reason))
+            else:
+                client.writeline("You are not an operator of %s" % self.name)
+        else:
+            client.writeline("%s isn't on the channel" % nick)
 
     def on_message(self, client, message):
         """

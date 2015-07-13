@@ -41,8 +41,9 @@ class Server:
             "PORT": tconfig["PORT"] if tconfig.get("PORT") else 5050,
             "TIMEOUT": tconfig["TIMEOUT"] if tconfig.get("TIMEOUT") else 0.5,
             "ADDRESS": tconfig["ADDRESS"] if tconfig.get("ADDRESS") else "127.0.0.1",
-            "MAX_NICK_LENGTH": tconfig["MAX_NICK_LENGTH"] if tconfig.get("MAX_NICK_LENGTH") else 12,
+            "MAX_NICK_LENGTH": int(tconfig["MAX_NICK_LENGTH"]) if tconfig.get("MAX_NICK_LENGTH") else 12,
             "CHANNEL_CREATION": tconfig["CHANNEL_CREATION"] if tconfig.get("CHANNEL_CREATION") else False,
+            "MAX_RECV_SIZE": int(tconfig["MAX_RECV_SIZE"]) if tconfig.get("MAX_RECV_SIZE") else 1024,
         }
         return config
 
@@ -140,14 +141,13 @@ class Server:
             client.writeline("Channel %s is already created" % name)
 
 
-    def ban_ip(self, client, ip):
+    def ban_ip(self, ip):
         """
         Ban a ip from joining the server
         """
-        if client.is_oper:
-            with open("banlist.txt", 'a') as f:
-                f.write(ip + "\n")
-            print("Added %s to banlist.txt" % ip)
+        with open("banlist.txt", 'a') as f:
+            f.write(ip + "\n")
+        print("Added %s to banlist.txt" % ip)
 
 
     def run(self):

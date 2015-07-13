@@ -4,7 +4,8 @@
     "flags": {
         "n": true,
         "k": "cookies",
-        "l": false
+        "l": false,
+        "O": true
     },
     "banlist": [],
     "ops": [
