@@ -1,13 +1,13 @@
 {
-    "name": "#help",
-    "topic": "Welcome to #help!",
+    "banlist": [],
     "flags": {
-        "n": true,
+        "O": false,
         "k": "cookies",
         "l": false,
-        "O": true
+        "n": true
     },
-    "banlist": [],
+    "name": "#help",
     "ops": [],
-    "owner": "aww:0c5c0fd0-d623-412b-9070-a9a2f2a212eb"
+    "owner": "aww:0c5c0fd0-d623-412b-9070-a9a2f2a212eb",
+    "topic": "Welcome to #help!"
 }

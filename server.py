@@ -107,7 +107,7 @@ class Server:
 
     def client_message_nick(self, client, nick, message):
         if nick in self.users.keys():
-            self.users[nick].writeline("USERMSG %s %s" % (client.nick, message))
+            self.users[nick].writeline("USERMSG %s %s %s" % (client.nick, client.ip, message))
         else:
             client.writeline("No user named: %s" % nick)
 

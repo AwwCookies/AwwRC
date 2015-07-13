@@ -1,3 +1,6 @@
+import json
+
+
 class Channel:
     """
     flags:
@@ -19,7 +22,7 @@ class Channel:
     def add_client(self, client):
         self.clients.append(client)
         self.users[client.nick] = client
-        self.writeline("JOIN %s %s has joined the channel" % (self.name, client.nick))
+        self.writeline("JOIN %s %s %s has joined the channel" % (self.name, client.ip, client.nick))
         client.writeline("TOPIC %s %s" % (self.name, self.topic))
         client.writeline("USERS %s %s" % (self.name, str(' '.join([user.nick for user in self.clients]))))
 
@@ -32,7 +35,7 @@ class Channel:
         to join the channel and they will recv a banned
         message from the channel
         """
-        print("%s joined %s" % (client.nick, self.name))
+        print("%s %s joined %s" % (client.nick, client.ip, self.name))
         if client.ip not in self.banlist:
             if self.flags.get('O'):
                 if client.is_oper:
@@ -57,7 +60,7 @@ class Channel:
                     self.add_client(client)
                     return True
         else:
-            client.writeline("BANNED", "BANNED You are banned from this channel.")
+            client.writeline("BANNED You are banned from this channel.")
 
     def on_part(self, client, message):
         """
@@ -95,6 +98,41 @@ class Channel:
         else:
             client.writeline("%s isn't on the channel" % nick)
 
+    def ban_user(self, client, nick):
+        """
+        Ban a user from the channel
+        client: operator that is banning
+        nick: user to be banned
+        """
+        if nick in self.users:
+            if self.is_op(client):
+                self.users[nick].on_ban(self)
+                self.banlist.append(self.users[nick].ip)
+                self.writeline("BAN %s was banned %s from %s" % (client.nick, nick, self.name))
+                self.save()
+            else:
+                client.writeline("You are not an operator of %s" % self.name)
+        else:
+            client.writeline("%s isn't on the channel" % nick)
+
+    def unban_ip(self, client, ip):
+        """
+        Unbans a user from the channel
+        client: operator that is unbanning
+        ip: ip to be unbanned
+        """
+        if self.is_op(client):
+            if ip in self.banlist:
+                self.banlist.remove(ip)
+                self.writeline("UNBAN %s was unbanned from %s" % (ip, self.name))
+                client.writeline("%s was removed from the ban list" % ip)
+                self.save()
+            else:
+                client.writeline("%s is not in the banlist for %s" % (ip, self.name))
+        else:
+            client.writeline("You are not an operator of %s" % self.name)
+
+
     def on_message(self, client, message):
         """
         Runs when a user sends a message to the channel
@@ -109,11 +147,11 @@ class Channel:
         else:
             if self.flags.get("n"): # if flag 'n' is set
                 if client in self.clients:
-                    self.writeline("CHANMSG %s %s %s" % (self.name, client.nick, message))
+                    self.writeline("CHANMSG %s %s %s %s" % (self.name, client.nick, client.ip, message))
                 else:
                     client.writeline("%s doesn't allow outside message. Please join the channel to send a message" % self.name)
             else:
-                self.writeline("CHANMSG %s %s %s" % (self.name, client.nick, message))
+                self.writeline("CHANMSG %s %s %s %s" % (self.name, client.nick, client.ip, message))
 
     def writeline(self, message):
         """
@@ -153,6 +191,7 @@ class Channel:
         """
         if self.is_owner(client):
             self.ops.append(users_uuid)
+            self.save()
         else:
             client.writeline("You are not an operator of %s" % self.name)
 
@@ -217,5 +256,5 @@ class Channel:
             "ops": self.ops,
             "owner": self.owner
         }
-        with open("channels/%s.json", 'w') as f:
+        with open("channels/%s.json" % self.name, 'w') as f:
             f.write(json.dumps(cvars, sort_keys=True, indent=4, separators=(',', ': ')))

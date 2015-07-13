@@ -76,6 +76,16 @@ class Client(threading.Thread):
                     self.channels[args[1]].kick_user(self, args[2], ' '.join(args[3:]))
                 else:
                     self.writeline("You are not in %s" % args[1])
+            elif 'ban' == args[0]:
+                if args[1] in self.channels:
+                    self.channels[args[1]].ban_user(self, args[2])
+                else:
+                    self.writeline("You are not in %s" % args[1])
+            elif 'unban' == args[0]:
+                if args[1] in self.channels:
+                    self.channels[args[1]].unban_ip(self, args[2])
+                else:
+                    self.writeline("You are not in %s" % args[1])
             elif 'msg' == args[0]:
                 self.message_nick(args[1], ' '.join(args[2:]))
             elif 'chanmsg' ==  args[0]:
@@ -222,6 +232,12 @@ class Client(threading.Thread):
         del self.channels[channel.name]
         self.writeline("YOURKICK You've been kicked from %s: %s" % (channel.name, reason))
 
+    def on_ban(self, channel):
+        """
+        Runs when you've been banned from a channel
+        """
+        self.writeline("BAN %s you were banned in %s" % (channel.name, channel.name))
+
     def on_sanick(self, new_nick):
         """
         Runs when a oper uses sanick on this client
@@ -233,6 +249,7 @@ class Client(threading.Thread):
         Runs when a user uses the whois command on this client
         """
         client.writeline("WHOIS %s Nick: %s" % (self.nick, self.nick))
+        client.writeline("WHOIS %s IP: %s" % (self.nick, self.ip))
         client.writeline("WHOIS %s Oper: %s" % (self.nick, self.is_oper))
         client.writeline("WHOIS %s Logged In: %s" % (self.nick, bool(self.logged_in())))
         if self.logged_in():
