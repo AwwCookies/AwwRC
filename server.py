@@ -14,11 +14,13 @@ import errorcodes
 
 
 class Server:
+
     '''
     Server class. Opens up a socket and listens for incoming connections.
     Every time a new connection arrives, it creates a new Client thread
     object and defers the processing of the connection to it.
     '''
+
     def __init__(self):
         self.CONFIG = self.load_config()
         self.sock = None
@@ -33,7 +35,7 @@ class Server:
         """
         Reloads the config and channels
         """
-        if client.is_oper:
+        if client.is_oper():
             self.channels = self.load_channels()
             self.CONFIG = self.load_config()
 
@@ -51,7 +53,6 @@ class Server:
             "SERVER_MAX_USERS": int(tconfig["SERVER_MAX_USERS"]) if tconfig.get("SERVER_MAX_USERS") else 100,
         }
         return config
-
 
     def load_channels(self):
         """
@@ -71,10 +72,14 @@ class Server:
         return channels
 
     def register_client(self, client):
+        if len(self.clients) > self.CONFIG["SERVER_MAX_USERS"]:
+            return False
         banlist = [ip.strip() for ip in open("./banlist.txt").readlines()]
-        if client.ip in banlist: # if this client is banned tell them to GTFO and disconnect them
+        # if this client is banned tell them to GTFO and disconnect them
+        if client.ip in banlist:
             self.writeline("%s is banned." % (client.ip))
-            client.writeline(json.dumps({"type": "YOURSERVERBAN", "ip": client.ip}))
+            client.writeline(
+                json.dumps({"type": "YOURSERVERBAN", "ip": client.ip}))
             client.quit()
             return False
         else:
@@ -82,9 +87,12 @@ class Server:
             self.writeline("%s is registered as %s" % (client.ip, client.nick))
             if os.path.exists("motd.txt"):
                 for line in open("motd.txt", 'r').readlines():
-                    client.writeline(json.dumps({"type": "SERVERMOTD", "message": line}))
-            client.writeline(json.dumps({"type": "SERVERCONFIG", "config": json.dumps(self.CONFIG)}))
-            client.writeline(json.dumps({"type": "SERVERUSERS", "amount": len(self.users)}))
+                    client.writeline(
+                        json.dumps({"type": "SERVERMOTD", "message": line}))
+            client.writeline(
+                json.dumps({"type": "SERVERCONFIG", "config": json.dumps(self.CONFIG)}))
+            client.writeline(
+                json.dumps({"type": "SERVERUSERS", "amount": len(self.clients)}))
             return True
 
     def register_account(self, client, email, hashedpw):
@@ -97,10 +105,14 @@ class Server:
             }))
         else:
             with open("accounts/%s.json" % client.nick, 'w') as f:
-                f.write(json.dumps({"email": email, "password": hashedpw,
-                    "uuid": client.nick + ':' + str(uuid.uuid4())},
-                        sort_keys=True, indent=4, separators=(',', ': ')))
-            self.writeline("%s created a new account [%s]" % (client.ip, client.nick))
+                f.write(json.dumps({
+                    "email": email,
+                    "password": hashedpw,
+                    "uuid": client.nick + ':' + str(uuid.uuid4()),
+                    "time_registered": int(time.time())
+                }, sort_keys=True, indent=4, separators=(',', ': ')))
+            self.writeline(
+                "%s created a new account [%s]" % (client.ip, client.nick))
             client.writeline(json.dumps({
                 "type": "SERVERMSG",
                 "message": "Your nick is now registered! You can now login with `login <password>`"
@@ -108,7 +120,8 @@ class Server:
 
     def client_login(self, client, hashedpw):
         if os.path.exists("accounts/%s.json" % client.nick):
-            user = json.loads(open("accounts/%s.json" % client.nick, 'r').read())
+            user = json.loads(
+                open("accounts/%s.json" % client.nick, 'r').read())
             if hashedpw == user["password"]:
                 client.account = user
                 client.writeline(json.dumps({
@@ -146,7 +159,6 @@ class Server:
                 "message": "%s isn't on the server" % client.nick
             }))
 
-
     def client_message_channel(self, client, channel, message):
         if channel in self.channels.keys():
             self.channels[channel].on_message(client, message)
@@ -157,13 +169,11 @@ class Server:
                 "message": "No channel named %s" % channel
             }))
 
-
     def oper(self, client, hashedpw):
         self.writeline("%s used the oper command" % client.ip)
         for oper in [op.strip() for op in open("./opers.txt", "r").readlines()]:
             if client.ip + '|' + hashedpw == oper:
                 return True
-
 
     def client_whois(self, client, nick):
         if self.users.get(nick):
@@ -176,7 +186,6 @@ class Server:
                 "message": "%s isn't on the server" % client.nick
             }))
 
-
     def create_channel(self, client, name, flags={}, topic=""):
         if name not in self.channels.keys():
             self.channels[name] = Channel(name, flags, topic)
@@ -186,7 +195,6 @@ class Server:
                 "type": "SERVERMSG",
                 "message": "Channel %s is already created" % name
             }))
-
 
     def ban_ip(self, ip):
         """
@@ -252,7 +260,7 @@ class Server:
         try:
             while True:
                 try:
-                    self.sock.settimeout(0.5) # .5 second timeout
+                    self.sock.settimeout(0.5)  # .5 second timeout
                     client_sock = self.sock.accept()[0]
                 except socket.timeout:
                     # No connection detected, sleep for one second, then check
@@ -268,11 +276,12 @@ class Server:
                     # Go over the list of threads, remove those that have finished
                     # (their run method has finished running) and wait for them
                     # to fully finish
+                    self.users = {}
                     for client in self.clients:
                         if not client.isAlive():
                             self.clients.remove(client)
-                            del self.users[client.nick]
-                            thread.join()
+                        else:
+                            self.users[client.nick] = client
                 except Exception, err:
                     print("Client error: %s" % err)
 

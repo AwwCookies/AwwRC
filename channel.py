@@ -1,5 +1,6 @@
 import json
 
+from collections import defaultdict
 
 class Channel:
     """
@@ -14,6 +15,7 @@ class Channel:
         self.flags = flags
         self.clients = []
         self.users = {}
+        self.user_flags = defaultdict(list)
         self.topic = topic
         self.banlist = banlist
         self.ops = ops
@@ -51,7 +53,7 @@ class Channel:
         print("%s %s joined %s" % (client.nick, client.ip, self.name))
         if client.ip not in self.banlist:
             if self.flags.get('O'):
-                if client.is_oper:
+                if client.is_oper():
                     self.add_client(client)
                     return True
                 else:
@@ -262,18 +264,18 @@ class Channel:
         Returns True if: client is a server admin
         """
         if client.logged_in():
-            return client.account["uuid"] in self.ops or self.name + "|o" in client.flags or client.is_oper
+            return client.account["uuid"] in self.ops or "o" in self.user_flags[client.nick] or client.is_oper()
         else:
-            return client.is_oper or self.name + "|o" in client.flags
+            return client.is_oper() or "o" in self.user_flags[client.nick]
 
     def is_owner(self, client):
         """
         Chekcs to see if the client is an owner of the channel
         """
         if client.logged_in():
-            return client.account["uuid"] in self.owner or client.is_oper
+            return client.account["uuid"] in self.owner or client.is_oper()
         else:
-            return client.is_oper
+            return client.is_oper()
 
     def add_op(self, client, users_uuid):
         """
@@ -303,7 +305,8 @@ class Channel:
         """
         if self.is_op(client):
             if nick in self.users:
-                self.users[nick].flags.append(self.name + "|" + flag)
+                # self.users[nick].flags.append(self.name + "|" + flag)
+                self.user_flags[nick].append(flag)
                 self.writeline(json.dumps({
                     "type": "CHANFLAG",
                     "channel": self.name,
@@ -331,16 +334,18 @@ class Channel:
         client: op/owners client
         nick: nick to remove flag from
         """
-        if is_op(client):
+        if self.is_op(client):
             if nick in self.clients:
-                self.users[nick].flags.remove(self.name + "|" + flag)
-                self.writeline(json.dumps({
-                    "type": "CHANFLAG",
-                    "channel": self.name,
-                    "nick": nick,
-                    "operator": client.nick,
-                    "flag": "-%s" % flag
-                }))
+                # self.users[nick].flags.remove(self.name + "|" + flag)
+                if flag in self.user_flags[nick]:
+                    self.user_flags[nick].remove(flag)
+                    self.writeline(json.dumps({
+                        "type": "CHANFLAG",
+                        "channel": self.name,
+                        "nick": nick,
+                        "operator": client.nick,
+                        "flag": "-%s" % flag
+                    }))
             else:
                 client.writeline(json.dumps({
                     "type": "CHANERROR",

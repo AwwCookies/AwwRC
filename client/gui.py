@@ -1,14 +1,3 @@
-# Author:     Kevin Koshiol
-# Filename:   irc_gui.py
-# Date:       3/6/2013
-# Class:      440
-
-'''
-This file contains my IRC Client GUI. Uses PyGTK for GUI.
-Majority of window dedicated displaying messages. Bottom of window used for
-user interaction: Entry box allows text to be entered, send sends
-'''
-
 import pygtk
 import gtk
 import sys
@@ -16,9 +5,7 @@ import socket
 import gobject
 
 
-class IRCGUI:
-
-    '''IRCGUI provides a user interface for my IRC Client'''
+class GUIClient:
 
     def __init__(self):
         '''Constructor: Sets up all widgets, window, and socket'''
@@ -51,7 +38,7 @@ class IRCGUI:
         self.connectTable.attach(self.connectPortBox, 1, 2, 1, 2)
         self.connectTable.attach(self.connectButton, 2, 3, 0, 2)
         self.connectTable.set_focus_chain(
-           (self.connectIPBox, self.connectPortBox, self.connectButton))
+            (self.connectIPBox, self.connectPortBox, self.connectButton))
         self.connectTable.show()
 
         self.connectWindow.add(self.connectTable)
@@ -76,7 +63,7 @@ class IRCGUI:
         self.windowBox = gtk.VBox(False, 0)
         self.windowBox.show()
         #self.messages = gtk.VBox(False, 0)
-        #self.messages.show()
+        # self.messages.show()
         self.messages = gtk.TextView()
         self.switch_buffer("status")
         self.editBox = gtk.HBox(False, 0)
@@ -97,7 +84,6 @@ class IRCGUI:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.dataBuffer = ""
 
-
     def makeConnection(self, widget, data=None):
         '''
         Takes data from IP and Port fields and attempts to make a connection to
@@ -105,10 +91,10 @@ class IRCGUI:
         '''
         ip = ""
         try:
-           ip = socket.gethostbyname(self.connectIPBox.get_text())
+            ip = socket.gethostbyname(self.connectIPBox.get_text())
         except Exception as e:
             fail = gtk.MessageDialog(None, 0, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK,
-               "Failed to resolve host\n" + str(e))
+                                     "Failed to resolve host\n" + str(e))
             fail.run()
             fail.destroy()
             return
@@ -117,21 +103,21 @@ class IRCGUI:
 
     def changedText(self, widget, data=None):
         sensitive = len(self.connectIPBox.get_text()) > 0 and \
-           len(self.connectPortBox.get_text()) > 0 and \
-           self.connectPortBox.get_text().isdigit() and \
-           int(self.connectPortBox.get_text()) > 0
+            len(self.connectPortBox.get_text()) > 0 and \
+            self.connectPortBox.get_text().isdigit() and \
+            int(self.connectPortBox.get_text()) > 0
         self.connectButton.set_sensitive(sensitive)
 
     def connectTo(self, addr):
         try:
-           self.socket.settimeout(1)
-           self.socket.connect(addr)
+            self.socket.settimeout(1)
+            self.socket.connect(addr)
         except Exception as e:
-           fail = gtk.MessageDialog(None, 0, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK,
-              "Failed to connect\n" + str(e))
-           fail.run()
-           fail.destroy()
-           return
+            fail = gtk.MessageDialog(None, 0, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK,
+                                     "Failed to connect\n" + str(e))
+            fail.run()
+            fail.destroy()
+            return
         self.connectWindow.hide()
         self.window.show()
         self.entry.grab_focus()
@@ -144,7 +130,7 @@ class IRCGUI:
 
     def disconnect(self, source=None, condition=None):
         dia = gtk.MessageDialog(None, 0, gtk.MESSAGE_ERROR, gtk.BUTTONS_OK,
-              "Lost connection to server")
+                                "Lost connection to server")
         dia.run()
         dia.destroy()
         sys.exit(0)
@@ -161,15 +147,16 @@ class IRCGUI:
                 self.socket.sendall(' '.join(message.split()[1:]) + "\n")
         else:
             args = message.split()
-            self.socket.send("chanmsg %s %s" % (self.current_buffer, ' '.join(args[2:])))
-        #else:
-        ##   message.strip()
+            self.socket.send("chanmsg %s %s" %
+                             (self.current_buffer, ' '.join(args[2:])))
+        # else:
+        # message.strip()
         #   self.socket.sendall(message + "\n")
 
     def read(self, source, condition):
         data = self.socket.recv(256)
         if not data:
-           self.disconnect()
+            self.disconnect()
         self.dataBuffer += data
 
         message = self.getNextMessage()
@@ -185,9 +172,9 @@ class IRCGUI:
     def getNextMessage(self):
         msg = ""
         if '\n' in self.dataBuffer:
-           index = self.dataBuffer.find('\n')
-           msg = self.dataBuffer[:index + 1]
-           self.dataBuffer = self.dataBuffer[index + 1:]
+            index = self.dataBuffer.find('\n')
+            msg = self.dataBuffer[:index + 1]
+            self.dataBuffer = self.dataBuffer[index + 1:]
         return msg.strip()
 
     def create_buffer(self, buff_name):
@@ -205,8 +192,9 @@ class IRCGUI:
     def add_message_buffer(self, buff_name, message):
         self.create_buffer(buff_name)
         start_iter = self.buffers[buff_name].get_start_iter()
-        end_iter =  self.buffers[buff_name].get_end_iter()
-        self.buffers[buff_name].set_text(self.buffers[buff_name].get_text(start_iter, end_iter, True) + message + "\n")
+        end_iter = self.buffers[buff_name].get_end_iter()
+        self.buffers[buff_name].set_text(
+            self.buffers[buff_name].get_text(start_iter, end_iter, True) + message + "\n")
 
     def add_message(self, message):
         if (not message):
@@ -222,8 +210,9 @@ class IRCGUI:
       #
     #   self.messages.pack_start(tbox, False, True, 0)
         start_iter = self.messages.get_buffer().get_start_iter()
-        end_iter =  self.messages.get_buffer().get_end_iter()
-        self.messages.get_buffer().set_text(self.messages.get_buffer().get_text(start_iter, end_iter, True) + message + "\n")
+        end_iter = self.messages.get_buffer().get_end_iter()
+        self.messages.get_buffer().set_text(
+            self.messages.get_buffer().get_text(start_iter, end_iter, True) + message + "\n")
         adj = self.scrollbox.get_vadjustment()
         adj.set_value(adj.get_upper())
 
@@ -238,5 +227,5 @@ class IRCGUI:
         gtk.main()
 
 if __name__ == "__main__":
-     base = IRCGUI()
-     base.main()
+    base = GUIClient()
+    base.main()

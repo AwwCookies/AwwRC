@@ -5,13 +5,17 @@ import time
 import json
 import hashlib
 import uuid
-import errorcodes
+
+
+import errorcodes  # Local Import
 
 
 class Client(threading.Thread):
+
     '''
     Class that implements the client threads in this server
     '''
+
     def __init__(self, client_sock, server):
         '''
         Initialize the object, save the socket that this thread will use.
@@ -19,9 +23,8 @@ class Client(threading.Thread):
         threading.Thread.__init__(self)
         self.client = client_sock
         self.server = server
-        self.ip = self.client.getpeername()[0] # Get the clients IP address
+        self.ip = self.client.getpeername()[0]  # Get the clients IP address
         self.nick = uuid.uuid4()
-        self.is_oper = False
         self.channels = {}
         self.account = None
         self.flags = []
@@ -30,7 +33,7 @@ class Client(threading.Thread):
         """
         Sets the clients nick
         """
-        #TODO: add nick restrictions
+        # TODO: add nick restrictions
         if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
             if nick not in self.server.users.keys():
                 old_nick = str(client.nick)
@@ -41,7 +44,8 @@ class Client(threading.Thread):
                     "old_nick": old_nick,
                     "new_nick": client.nick
                 }))
-                self.server.writeline("%s is now known as %s" % (old_nick, nick))
+                self.server.writeline(
+                    "%s is now known as %s" % (old_nick, nick))
             else:
                 self.writeline(json.dumps({
                     "type": "ERROR",
@@ -54,7 +58,7 @@ class Client(threading.Thread):
                 "type": "ERROR",
                 "code": errorcodes.get("nick excecced limit"),
                 "message": "Your nick is too long. Please choose a nick with less than %i chars" %
-                    self.server.CONFIG["MAX_NICK_LENGTH"]
+                self.server.CONFIG["MAX_NICK_LENGTH"]
             }))
             self.set_nick(client, client.readline())
 
@@ -66,92 +70,102 @@ class Client(threading.Thread):
         Thread's main loop. Once this function returns, the thread is finished
         and dies.
         '''
-        # client needs to change their nick
-        self.writeline(json.dumps({
-            "type": "PICKNICK",
-            "message": "Please pick a nick"
-        }))
-        self.set_nick(self, self.readline())
-        # Need to declare QUIT as global, since the method can change it
-        cmd = self.readline()
-        # Read data from the socket and process it
-        while True:
-            args = cmd.split(" ")
-            if 'quit' == cmd:
-                self.writeline('Ok, bye')
-                return
-            elif 'nick' == cmd:
-                self.writeline("Your nick is: %s" % self.nick)
-            elif 'register' == args[0]:
-                self.server.register_account(self, args[1],
-                    hashlib.md5(' '.join(args[2:])).hexdigest())
-            elif 'login' == args[0]:
-                self.server.client_login(self, hashlib.md5(' '.join(args[1:])).hexdigest())
-            elif 'kick' == args[0]:
-                if args[1] in self.channels:
-                    self.channels[args[1]].kick_user(self, args[2], ' '.join(args[3:]))
-                else:
-                    self.writeline("You are not in %s" % args[1])
-            elif 'ban' == args[0]:
-                if args[1] in self.channels:
-                    self.channels[args[1]].ban_user(self, args[2])
-                else:
-                    self.writeline("You are not in %s" % args[1])
-            elif 'unban' == args[0]:
-                if args[1] in self.channels:
-                    self.channels[args[1]].unban_ip(self, args[2])
-                else:
-                    self.writeline("You are not in %s" % args[1])
-            elif 'msg' == args[0]:
-                self.message_nick(args[1], ' '.join(args[2:]))
-            elif 'chanmsg' ==  args[0]:
-                self.message_channel(args[1], ' '.join(args[2:]))
-            elif 'channels' == args[0]:
-                self.writeline("You're in: %s" % self.channels.keys())
-            elif 'oper?' == args[0]:
-                self.writeline("Oper: %s" % str(self.is_oper))
-            elif 'whois' == args[0]:
-                self.server.client_whois(self, args[1])
-            elif 'join' == args[0]:
-                self.join(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-            elif 'part' == args[0]:
-                self.part(args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-            elif 'flags' == args[0]:
-                self.writeline("FLAGS %s %s" % (self.nick, self.flags))
-            #NOTE: Oper Commands
-            elif 'oper' == args[0]:
-                self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
-            elif 'kill' == args[0]:
-                self.kill(args[1])
-            elif 'sanick' == args[0]:
-                self.sanick(args[1], args[2])
-            elif 'sajoin' == args[0]:
-                self.sajoin(args[1], args[2])
-            elif 'sapart' == args[0]:
-                self.sapart(args[1], args[2])
-            elif 'chanflag' == args[0]:
-                chan = args[2]
-                nick = args[3]
-                flag = args[4]
-                if chan in self.channels.keys():
-                    if args[1] == "add":
-                        self.channels[chan].add_client_flag(self, nick, flag)
-                    elif args[1] == "remove":
-                        self.channels[chan].remove_client_flag(self, nick, flag)
-                else:
-                    self.writeline("You are not in %s" % chan)
-            elif 'flags' == args[0]:
-                self.writeline("FLAGS %s %s" % (self.nick, self.flags))
-            elif 'ban' == args[0]:
-                self.ban_ip(args[1])
-            else:
-                self.writeline("%s: invalid command" % args[0])
-
+        try:
+            # client needs to change their nick
+            self.writeline(json.dumps({
+                "type": "PICKNICK",
+                "message": "Please pick a nick"
+            }))
+            self.set_nick(self, self.readline())
+            # Need to declare QUIT as global, since the method can change it
             cmd = self.readline()
+            # Read data from the socket and process it
+            while True:
+                args = cmd.split(" ")
+                if 'quit' == cmd:
+                    self.writeline('Ok, bye')
+                    return
+                elif 'nick' == cmd:
+                    self.writeline("Your nick is: %s" % self.nick)
+                elif 'register' == args[0]:
+                    self.server.register_account(self, args[1],
+                                                 hashlib.md5(' '.join(args[2:])).hexdigest())
+                elif 'login' == args[0]:
+                    self.server.client_login(
+                        self, hashlib.md5(' '.join(args[1:])).hexdigest())
+                elif 'kick' == args[0]:
+                    if args[1] in self.channels:
+                        self.channels[args[1]].kick_user(
+                            self, args[2], ' '.join(args[3:]))
+                    else:
+                        self.writeline("You are not in %s" % args[1])
+                elif 'ban' == args[0]:
+                    if args[1] in self.channels:
+                        self.channels[args[1]].ban_user(self, args[2])
+                    else:
+                        self.writeline("You are not in %s" % args[1])
+                elif 'unban' == args[0]:
+                    if args[1] in self.channels:
+                        self.channels[args[1]].unban_ip(self, args[2])
+                    else:
+                        self.writeline("You are not in %s" % args[1])
+                elif 'msg' == args[0]:
+                    self.message_nick(args[1], ' '.join(args[2:]))
+                elif 'chanmsg' == args[0]:
+                    self.message_channel(args[1], ' '.join(args[2:]))
+                elif 'channels' == args[0]:
+                    self.writeline("You're in: %s" % self.channels.keys())
+                elif 'oper?' == args[0]:
+                    self.writeline("Oper: %s" % str(self.is_oper()))
+                elif 'whois' == args[0]:
+                    self.server.client_whois(self, args[1])
+                elif 'join' == args[0]:
+                    self.join(
+                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+                elif 'part' == args[0]:
+                    self.part(
+                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+                elif 'flags' == args[0]:
+                    self.writeline("FLAGS %s %s" % (self.nick, self.flags))
+                # NOTE: Oper Commands
+                elif 'oper' == args[0]:
+                    self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
+                elif 'kill' == args[0]:
+                    self.kill(args[1])
+                elif 'sanick' == args[0]:
+                    self.sanick(args[1], args[2])
+                elif 'sajoin' == args[0]:
+                    self.sajoin(args[1], args[2])
+                elif 'sapart' == args[0]:
+                    self.sapart(args[1], args[2])
+                elif 'chanflag' == args[0]:
+                    chan = args[2]
+                    nick = args[3]
+                    flag = args[4]
+                    if chan in self.channels.keys():
+                        if args[1] == "add":
+                            self.channels[chan].add_client_flag(
+                                self, nick, flag)
+                        elif args[1] == "remove":
+                            self.channels[chan].remove_client_flag(
+                                self, nick, flag)
+                    else:
+                        self.writeline("You are not in %s" % chan)
+                elif 'flags' == args[0]:
+                    self.writeline("FLAGS %s %s" % (self.nick, self.flags))
+                elif 'ban' == args[0]:
+                    self.ban_ip(args[1])
+                else:
+                    self.writeline("%s: invalid command" % args[0])
 
-        # Make sure the socket is closed once we're done with it
-        self.client.close()
-        return
+                cmd = self.readline()
+
+            # Make sure the socket is closed once we're done with it
+            self.client.close()
+            return
+        except:
+            self.client.close()
+            return
 
     def readline(self):
         '''
@@ -187,7 +201,7 @@ class Client(threading.Thread):
         Turns the client into an oper (Server Operator)
         """
         if self.server.oper(self, hashedpw):
-            self.is_oper = True
+            self.flags.append("O")
             self.writeline(json.dumps({
                 "type": "SERVERMSG",
                 "message": "You are now an oper!"
@@ -197,7 +211,6 @@ class Client(threading.Thread):
         else:
             self.writeline("Invalid credentials")
             self.server.writeline("%s failed to oper" % self.nick)
-
 
     def join(self, channel, key=None):
         """
@@ -286,7 +299,8 @@ class Client(threading.Thread):
         """
         Runs when a oper uses sanick on this client
         """
-        self.writeline("Your nick was changed by a server admin to %s" % new_nick)
+        self.writeline(
+            "Your nick was changed by a server admin to %s" % new_nick)
         self.writeline(json.dumps({
             "type": "YOUSANICK",
             "new_nick": new_nick
@@ -309,7 +323,7 @@ class Client(threading.Thread):
         client.writeline(json.dumps({
             "type": "WHOIS",
             "nick": self.nick,
-            "message": "Oper: %s" % (self.is_oper)
+            "message": "Oper: %s" % (self.is_oper())
         }))
         client.writeline(json.dumps({
             "type": "WHOIS",
@@ -344,12 +358,15 @@ class Client(threading.Thread):
         }))
 
     ##### Oper Commands #####
+    def is_oper(self):
+        return "O" in self.flags
+
     def kill(self, nick):
         """
         Disconnects a user from the server
         Kinda like a channel kick but from the server
         """
-        if self.is_oper:
+        if self.is_oper():
             if nick in self.server.users.keys():
                 self.server.users[nick].on_kill("You were killed.")
                 self.writeline(json.dumps({
@@ -374,7 +391,7 @@ class Client(threading.Thread):
         """
         Force a user to change their nick
         """
-        if self.is_oper:
+        if self.is_oper():
             if self.server.users.get(nick):
                 self.server.users[nick].nick = new_nick
                 self.server.users[nick].on_sanick(new_nick)
@@ -383,7 +400,8 @@ class Client(threading.Thread):
                     "type": "SERVERMSG",
                     "message": "You changed %s nick to %s" % (nick, new_nick)
                 }))
-                self.server.writeline("%s changed %s's nick to %s" % (self.nick, nick, new_nick))
+                self.server.writeline(
+                    "%s changed %s's nick to %s" % (self.nick, nick, new_nick))
         else:
             self.writeline(json.dumps({
                 "type": "ERROR",
@@ -396,18 +414,20 @@ class Client(threading.Thread):
         Force a user to join a channel
         this will bypass all restrictions
         """
-        if self.is_oper:
+        if self.is_oper():
             if channel in self.server.channels:
                 if nick in self.server.users:
-                    self.server.channels[channel].add_client(self.server.users[nick])
+                    self.server.channels[channel].add_client(
+                        self.server.users[nick])
                     self.server.users[nick].on_sajoin(channel)
-                    self.writeline("%s was forced to join %s" % (nick, channel))
+                    self.writeline("%s was forced to join %s" %
+                                   (nick, channel))
                     self.writeline(json.dumps({
                         "type": "SERVERMSG",
                         "message": "You forced %s to join %s" % (nick, channel)
                     }))
                     self.server.writeline("%s forced %s to join %s" %
-                        (self.nick, nick, channel))
+                                          (self.nick, nick, channel))
                 else:
                     self.writeline(json.dumps({
                         "type": "ERROR",
@@ -431,12 +451,14 @@ class Client(threading.Thread):
         """
         Force a user to leave (part) a channel
         """
-        if self.is_oper:
+        if self.is_oper():
             if nick in self.server.users:
                 if channel in self.server.channels:
-                    self.server.channels[channel].on_part(self.server.users[nick], "sapart")
+                    self.server.channels[channel].on_part(
+                        self.server.users[nick], "sapart")
                     self.server.users[nick].on_sapart(channel)
-                    self.writeline("You forced %s to leave %s" % (nick, channel))
+                    self.writeline("You forced %s to leave %s" %
+                                   (nick, channel))
                     self.server.writeline("%s forced %s to leave %s" % (
                         self.nick, nick, channel))
                 else:
@@ -462,7 +484,7 @@ class Client(threading.Thread):
         """
         Adds an ip to the banlist.txt
         """
-        if self.is_oper:
+        if self.is_oper():
             self.server.ban_ip(self, ip)
             self.writeline(json.dumps({
                 "type": "SERVERMSG",
