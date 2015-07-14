@@ -155,6 +155,8 @@ class Client(threading.Thread):
                     self.writeline("FLAGS %s %s" % (self.nick, self.flags))
                 elif 'ban' == args[0]:
                     self.ban_ip(args[1])
+                elif 'announcement' == args[0]:
+                    self.server_announcemet(' '.join(args[1]))
                 else:
                     self.writeline("%s: invalid command" % args[0])
 
@@ -163,7 +165,8 @@ class Client(threading.Thread):
             # Make sure the socket is closed once we're done with it
             self.client.close()
             return
-        except:
+        except Exception, err:
+            print err
             self.client.close()
             return
 
@@ -495,4 +498,17 @@ class Client(threading.Thread):
                 "type": "ERROR",
                 "code": errorcodes.get("not an oper"),
                 "message": "You need to be an oper to use the `ban` command"
+            }))
+
+    def server_announcemet(self, message):
+        """
+        Send a message to all clients connected to the server
+        """
+        if self.is_oper():
+            self.server.server_announcement(message)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `announcement` command"
             }))

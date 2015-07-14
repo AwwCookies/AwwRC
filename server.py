@@ -175,6 +175,17 @@ class Server:
             if client.ip + '|' + hashedpw == oper:
                 return True
 
+
+    def server_announcement(self, message):
+        """
+        Send a message to all clients connected to the server
+        """
+        for client in self.clients:
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "ANNOUNCEMENT: " + message
+            }))
+
     def client_whois(self, client, nick):
         if self.users.get(nick):
             self.users[nick].on_whois(client)
