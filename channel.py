@@ -22,9 +22,22 @@ class Channel:
     def add_client(self, client):
         self.clients.append(client)
         self.users[client.nick] = client
-        self.writeline("JOIN %s %s %s has joined the channel" % (self.name, client.ip, client.nick))
-        client.writeline("TOPIC %s %s" % (self.name, self.topic))
-        client.writeline("USERS %s %s" % (self.name, str(' '.join([user.nick for user in self.clients]))))
+        self.writeline(json.dumps({
+            "type": "CHANJOIN",
+            "nick": client.nick,
+            "ip": client.ip,
+            "channel": self.name
+        }))
+        client.writeline(json.dumps({
+            "type": "CHANTOPIC",
+            "channel": self.name,
+            "topic": self.topic
+        }))
+        client.writeline(json.dumps({
+            "type": "CHANUSERS",
+            "channel": self.name,
+            "userlist": self.users.keys()
+        }))
 
     def on_join(self, client, key=None):
         """
@@ -42,25 +55,44 @@ class Channel:
                     self.add_client(client)
                     return True
                 else:
-                    client.writeline("You must be an oper to join %s" % self.name)
+                    client.writeline(json.dumps({
+                        "type": "CHANERROR",
+                        "channel": self.name,
+                        "message": "not an oper"
+                    }))
             elif self.flags.get('k'): # if a key is set
                     if key == self.flags.get('k'):
                         self.add_client(client)
                         return True
                     elif key != None: # client gave a password but it was incorrect
-                        client.writeline("Invalid password to join %s" % self.name)
+                        client.writeline(json.dumps({
+                            "type": "CHANERROR",
+                            "channel": self.name,
+                            "message": "invalid password"
+                        }))
                     else: # client did not give a password
-                        client.writeline("You need a password to join  %s" % self.name)
+                        client.writeline(json.dumps({
+                            "type": "CHANERROR",
+                            "channel": self.name,
+                            "message": "password protected channel"
+                        }))
             elif self.flags.get('l'): # Channel Limit
                 print len(self.clients) > self.flags.get('l')
                 if len(self.clients) > self.flags.get('l'): # excecced limit
-                    client.writeline("Channel %s is full" % self.name)
+                    client.writeline(json.dumps({
+                        "type": "CHANERROR",
+                        "channel": self.name,
+                        "message": "channel full"
+                    }))
                     return True
                 else: # if no limit or within
                     self.add_client(client)
                     return True
         else:
-            client.writeline("BANNED You are banned from this channel.")
+            client.writeline(json.dumps({
+                "type": "YOUCHANBANNED",
+                "channel": self.name
+            }))
 
     def on_part(self, client, message):
         """
@@ -70,7 +102,13 @@ class Channel:
         """
         del self.users[client.nick]
         self.clients.remove(client)
-        self.writeline("%s left the channel: %s" % (client.nick, message))
+        self.writeline(json.dumps({
+            "type": "CHANPART",
+            "channel": self.name,
+            "nick": client.nick,
+            "ip": client.ip,
+            "message": message
+        }))
 
     def on_quit(self, client):
         """
@@ -91,12 +129,24 @@ class Channel:
                 self.users[nick].on_kick(self, reason)
                 self.clients.remove(self.users[nick])
                 del self.users[nick]
-                client.writeline("KICK %s You kicked %s from %s: %s" % (
-                    self.name, nick, self.name, reason))
+                self.writeline(json.dumps({
+                    "type": "CHANKICK",
+                    "channel": self.name,
+                    "nick": nick,
+                    "message": reason
+                }))
             else:
-                client.writeline("You are not an operator of %s" % self.name)
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "not an operator"
+                }))
         else:
-            client.writeline("%s isn't on the channel" % nick)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "nick not on channel"
+            }))
 
     def ban_user(self, client, nick):
         """
@@ -108,12 +158,24 @@ class Channel:
             if self.is_op(client):
                 self.users[nick].on_ban(self)
                 self.banlist.append(self.users[nick].ip)
-                self.writeline("BAN %s was banned %s from %s" % (client.nick, nick, self.name))
+                self.writeline(json.dumps({
+                    "type": "CHANBAN",
+                    "channel": self.name,
+                    "nick": nick
+                }))
                 self.save()
             else:
-                client.writeline("You are not an operator of %s" % self.name)
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "not an operator"
+                }))
         else:
-            client.writeline("%s isn't on the channel" % nick)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "nick not on channel"
+            }))
 
     def unban_ip(self, client, ip):
         """
@@ -125,12 +187,24 @@ class Channel:
             if ip in self.banlist:
                 self.banlist.remove(ip)
                 self.writeline("UNBAN %s was unbanned from %s" % (ip, self.name))
-                client.writeline("%s was removed from the ban list" % ip)
+                self.writeline(json.dumps({
+                    "type": "CHANUNBAN",
+                    "channel": self.name,
+                    "ip": ip
+                }))
                 self.save()
             else:
-                client.writeline("%s is not in the banlist for %s" % (ip, self.name))
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "nick not in ban list"
+                }))
         else:
-            client.writeline("You are not an operator of %s" % self.name)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
 
 
     def on_message(self, client, message):
@@ -143,15 +217,35 @@ class Channel:
         message to everyone in the channel
         """
         if client.ip in self.banlist: # if the user is banned
-            client.writeline("You are banned from %s" % self.name)
+            client.writeline(json.dumps({
+                "type": "YOUCHANBANNED",
+                "channel": self.name,
+                "message": "You are banned from %s" % self.name
+            }))
         else:
             if self.flags.get("n"): # if flag 'n' is set
                 if client in self.clients:
-                    self.writeline("CHANMSG %s %s %s %s" % (self.name, client.nick, client.ip, message))
+                    self.writeline(json.dumps({
+                        "type": "CHANMSG",
+                        "channel": self.name,
+                        "nick": client.nick,
+                        "ip": client.ip,
+                        "message": message
+                    }))
                 else:
-                    client.writeline("%s doesn't allow outside message. Please join the channel to send a message" % self.name)
+                    client.writeline(json.dumps({
+                        "type": "CHANERROR",
+                        "channel": self.name,
+                        "message": "no outside messages"
+                    }))
             else:
-                self.writeline("CHANMSG %s %s %s %s" % (self.name, client.nick, client.ip, message))
+                self.writeline(json.dumps({
+                    "type": "CHANMSG",
+                    "channel": self.name,
+                    "nick": client.nick,
+                    "ip": client.ip,
+                    "message": message
+                }))
 
     def writeline(self, message):
         """
@@ -193,7 +287,11 @@ class Channel:
             self.ops.append(users_uuid)
             self.save()
         else:
-            client.writeline("You are not an operator of %s" % self.name)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
 
 
     def add_client_flag(self, client, nick, flag):
@@ -206,13 +304,25 @@ class Channel:
         if self.is_op(client):
             if nick in self.users:
                 self.users[nick].flags.append(self.name + "|" + flag)
-                client.writeline("You gave %s %s" % (nick, flag))
-                self.writeline("CHANMODE + %s %s gave %s to %s" % (
-                    self.name, client.nick, flag, nick))
+                self.writeline(json.dumps({
+                    "type": "CHANFLAG",
+                    "channel": self.name,
+                    "nick": nick,
+                    "operator": client.nick,
+                    "flag": "+%s" % flag
+                }))
             else:
-                client.writeline("ERROR %s is not in %s" % (nick, self.name))
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "nick not on channel"
+                }))
         else:
-            client.writeline("You are not an operator of %s" % self.name)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
 
     def remove_client_flag(self, client, nick, flag):
         """
@@ -224,13 +334,25 @@ class Channel:
         if is_op(client):
             if nick in self.clients:
                 self.users[nick].flags.remove(self.name + "|" + flag)
-                client.writeline("You removed %s's flag %s" % (nick, flag))
-                self.writeline("CHANMODE - %s %s removed %s from %s" % (
-                    self.name, client.nick, flag, nick))
+                self.writeline(json.dumps({
+                    "type": "CHANFLAG",
+                    "channel": self.name,
+                    "nick": nick,
+                    "operator": client.nick,
+                    "flag": "-%s" % flag
+                }))
             else:
-                client.writeline("ERROR %s is not in %s" % (nick, self.name))
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "nick not on channel"
+                }))
         else:
-            client.writeline("You are not an operator of %s" % self.name)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
 
     def set_topic(self, client, new_topic):
         """
@@ -239,10 +361,18 @@ class Channel:
         """
         if is_op(client):
             self.topic = new_topic
-            self.writeline("TOPIC %s %s" % (self.name, self.topic))
+            self.writeline(json.dumps({
+                "type": "CHANTOPIC",
+                "channel": self.name,
+                "topic": self.topic
+            }))
             self.save()
         else:
-            client.writeline("You're are not an operator of %s" % self.name)
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
 
     def save(self):
         """

@@ -10,6 +10,7 @@ import uuid
 # Local Imports
 from client import Client
 from channel import Channel
+import errorcodes
 
 
 class Server:
@@ -19,12 +20,14 @@ class Server:
     object and defers the processing of the connection to it.
     '''
     def __init__(self):
+        self.CONFIG = self.load_config()
         self.sock = None
         self.clients = []
         self.users = {}
         self.channels = self.load_channels()
-        self.CONFIG = self.load_config()
         print self.CONFIG
+        self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(
+            self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True}, "Server Admin Channel")
 
     def rehash(self, client):
         """
@@ -44,6 +47,8 @@ class Server:
             "MAX_NICK_LENGTH": int(tconfig["MAX_NICK_LENGTH"]) if tconfig.get("MAX_NICK_LENGTH") else 12,
             "CHANNEL_CREATION": tconfig["CHANNEL_CREATION"] if tconfig.get("CHANNEL_CREATION") else False,
             "MAX_RECV_SIZE": int(tconfig["MAX_RECV_SIZE"]) if tconfig.get("MAX_RECV_SIZE") else 1024,
+            "SERVER_ADMIN_CHANNEL": tconfig["SERVER_ADMIN_CHANNEL"] if tconfig.get("SERVER_ADMIN_CHANNEL") else "&ADMIN",
+            "SERVER_MAX_USERS": int(tconfig["SERVER_MAX_USERS"]) if tconfig.get("SERVER_MAX_USERS") else 100,
         }
         return config
 
@@ -68,59 +73,93 @@ class Server:
     def register_client(self, client):
         banlist = [ip.strip() for ip in open("./banlist.txt").readlines()]
         if client.ip in banlist: # if this client is banned tell them to GTFO and disconnect them
-            print("%s is banned." % (client.ip))
-            client.writeline("You are banned. Please GTFO")
+            self.writeline("%s is banned." % (client.ip))
+            client.writeline(json.dumps({"type": "YOURSERVERBAN", "ip": client.ip}))
             client.quit()
             return False
         else:
             self.users[client.nick] = client
-            print("%s is registered as %s" % (client.ip, client.nick))
+            self.writeline("%s is registered as %s" % (client.ip, client.nick))
             if os.path.exists("motd.txt"):
                 for line in open("motd.txt", 'r').readlines():
-                    client.writeline("MOTD " + line)
-            client.writeline("CONFIG %s" % json.dumps(self.CONFIG))
-            client.writeline("USERS There is %d %s connected." %
-                (len(self.users), "users" if len(self.users) > 1 else "user"))
+                    client.writeline(json.dumps({"type": "SERVERMOTD", "message": line}))
+            client.writeline(json.dumps({"type": "SERVERCONFIG", "config": json.dumps(self.CONFIG)}))
+            client.writeline(json.dumps({"type": "SERVERUSERS", "amount": len(self.users)}))
             return True
 
     def register_account(self, client, email, hashedpw):
         if os.path.exists("accounts/%s.json" % client.nick):
             client.writeline("This nick is already registered.")
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("nick already registered"),
+                "message": "Nick is already registered"
+            }))
         else:
             with open("accounts/%s.json" % client.nick, 'w') as f:
                 f.write(json.dumps({"email": email, "password": hashedpw,
                     "uuid": client.nick + ':' + str(uuid.uuid4())},
                         sort_keys=True, indent=4, separators=(',', ': ')))
-            print("%s created a new account [%s]" % (client.ip, client.nick))
-            client.writeline("Your nick is now registered! You can now login with `login <password>`")
+            self.writeline("%s created a new account [%s]" % (client.ip, client.nick))
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "Your nick is now registered! You can now login with `login <password>`"
+            }))
 
     def client_login(self, client, hashedpw):
         if os.path.exists("accounts/%s.json" % client.nick):
             user = json.loads(open("accounts/%s.json" % client.nick, 'r').read())
             if hashedpw == user["password"]:
                 client.account = user
-                client.writeline("You're now logged in!")
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You're now logged in!"
+                }))
+                self.writeline("%s logged in" % client.nick)
             else:
                 client.writeline("ERROR Invalid password for %s" % client.nick)
+                client.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("invalid nick password"),
+                    "message": "invalid password for %s" % client.nick
+                }))
+                self.writeline("%s failed to login" % client.nick)
         else:
-            client.writeline("There is no account by the name %s" % client.nick)
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid account name"),
+                "message": "account %s not found." % client.nick
+            }))
 
     def client_message_nick(self, client, nick, message):
         if nick in self.users.keys():
-            self.users[nick].writeline("USERMSG %s %s %s" % (client.nick, client.ip, message))
+            self.users[nick].writeline(json.dumps({
+                "type": "USERMSG",
+                "nick": client.nick,
+                "ip": client.ip,
+                "message": message
+            }))
         else:
-            client.writeline("No user named: %s" % nick)
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "%s isn't on the server" % client.nick
+            }))
 
 
     def client_message_channel(self, client, channel, message):
         if channel in self.channels.keys():
             self.channels[channel].on_message(client, message)
         else:
-            client.writeline("No channel named %s" % channel)
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "No channel named %s" % channel
+            }))
 
 
     def oper(self, client, hashedpw):
-        print("%s used the oper command" % client.ip)
+        self.writeline("%s used the oper command" % client.ip)
         for oper in [op.strip() for op in open("./opers.txt", "r").readlines()]:
             if client.ip + '|' + hashedpw == oper:
                 return True
@@ -129,16 +168,24 @@ class Server:
     def client_whois(self, client, nick):
         if self.users.get(nick):
             self.users[nick].on_whois(client)
+            self.writeline("%s used whois on %s" % (client.nick, nick))
         else:
-            client.writeline("%s isn't on the server" % nick)
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "%s isn't on the server" % client.nick
+            }))
 
 
     def create_channel(self, client, name, flags={}, topic=""):
         if name not in self.channels.keys():
             self.channels[name] = Channel(name, flags, topic)
-            print self.channels
+            self.writeline("%s created a new channel %s" % (client.nick, name))
         else:
-            client.writeline("Channel %s is already created" % name)
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "Channel %s is already created" % name
+            }))
 
 
     def ban_ip(self, ip):
@@ -147,8 +194,19 @@ class Server:
         """
         with open("banlist.txt", 'a') as f:
             f.write(ip + "\n")
-        print("Added %s to banlist.txt" % ip)
+        self.writeline("Added %s to banlist.txt" % ip)
 
+    def set_motd(self, motd):
+        pass
+
+    def writeline(self, message):
+        print(message)
+        self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]].writeline(json.dumps({
+            "type": "CHANMSG",
+            "channel": self.CONFIG["SERVER_ADMIN_CHANNEL"],
+            "nick": "SERVER",
+            "message": message
+        }))
 
     def run(self):
         '''

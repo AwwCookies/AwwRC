@@ -5,6 +5,7 @@ import time
 import json
 import hashlib
 import uuid
+import errorcodes
 
 
 class Client(threading.Thread):
@@ -32,17 +33,29 @@ class Client(threading.Thread):
         #TODO: add nick restrictions
         if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
             if nick not in self.server.users.keys():
-                old_nick = client.nick
-                client.nick = nick
+                old_nick = str(client.nick)
+                client.nick = str(nick)
                 self.server.users[client.nick] = self
-                self.writeline("You are now known as %s" % nick)
-                print("%s is now known as %s" % (old_nick, nick))
+                self.writeline(json.dumps({
+                    "type": "NICK",
+                    "old_nick": old_nick,
+                    "new_nick": client.nick
+                }))
+                self.server.writeline("%s is now known as %s" % (old_nick, nick))
             else:
-                client.writeline("%s is already in use. Please choose a new nick." % nick)
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("nick in use"),
+                    "message": "%s is already in use. Please choose a new nick." % nick
+                }))
                 self.set_nick(client, client.readline())
         else:
-            client.writeline("Your nick is too long. Please choose nick with less than %i chars" %
-                self.server.CONFIG["MAX_NICK_LENGTH"])
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("nick excecced limit"),
+                "message": "Your nick is too long. Please choose a nick with less than %i chars" %
+                    self.server.CONFIG["MAX_NICK_LENGTH"]
+            }))
             self.set_nick(client, client.readline())
 
     def logged_in(self):
@@ -54,7 +67,10 @@ class Client(threading.Thread):
         and dies.
         '''
         # client needs to change their nick
-        self.writeline("Please pick a nick")
+        self.writeline(json.dumps({
+            "type": "PICKNICK",
+            "message": "Please pick a nick"
+        }))
         self.set_nick(self, self.readline())
         # Need to declare QUIT as global, since the method can change it
         cmd = self.readline()
@@ -140,11 +156,11 @@ class Client(threading.Thread):
     def readline(self):
         '''
         Helper function, reads up to MAX_RECV_SIZE chars from the socket, and returns
-        them as a string, all letters in lowercase, and without any end of line
+        them as a string, without any end of line
         markers '''
         result = self.client.recv(self.server.CONFIG["MAX_RECV_SIZE"])
         if(result != None):
-            result = result.strip().lower()
+            result = result.strip()
         return result
 
     def writeline(self, text):
@@ -172,10 +188,15 @@ class Client(threading.Thread):
         """
         if self.server.oper(self, hashedpw):
             self.is_oper = True
-            self.writeline("You are now an oper!")
-            print("%s oppered" % self.nick)
+            self.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You are now an oper!"
+            }))
+            self.join(self.server.CONFIG["SERVER_ADMIN_CHANNEL"])
+            self.server.writeline("%s oppered" % self.nick)
         else:
             self.writeline("Invalid credentials")
+            self.server.writeline("%s failed to oper" % self.nick)
 
 
     def join(self, channel, key=None):
@@ -192,13 +213,19 @@ class Client(threading.Thread):
                 if self.server.channels[channel].on_join(self, key):
                     self.channels[channel] = self.server.channels[channel]
             else:
-                self.writeline("You're already in %s" % channel)
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You're already in %s" % channel
+                }))
         else:
             if self.server.CONFIG.get("CHANNEL_CREATION"):
                 self.server.create_channel(self, channel)
                 self.channels[channel] = self.server.channels[channel]
             else:
-                self.writeline("This server does not allow the creation of channels")
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "This server does not allow the creation of channels"
+                }))
 
     def part(self, channel, message="bye"):
         """
@@ -207,9 +234,16 @@ class Client(threading.Thread):
         if channel in self.channels:
             self.channels[channel].on_part(self, message)
             del self.channels[channel]
-            self.writeline("You left %s (%s)" % (channel, message))
+            self.writeline(json.dumps({
+                "type": "YOUPART",
+                "channel": channel,
+                "message": message
+            }))
         else:
-            self.writeline("You are not in %s" % channel)
+            self.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You are not in %s" % channel
+            }))
 
     def quit(self):
         """
@@ -222,7 +256,10 @@ class Client(threading.Thread):
         """
         Runs when the user gets killed from the network
         """
-        self.writeline("KILLED %s" % message)
+        self.writeline(json.dumps({
+            "type": "YOUKILLED",
+            "message": message
+        }))
         self.quit()
 
     def on_kick(self, channel, reason):
@@ -230,44 +267,81 @@ class Client(threading.Thread):
         Runs when you've been kicked from a channel
         """
         del self.channels[channel.name]
-        self.writeline("YOURKICK You've been kicked from %s: %s" % (channel.name, reason))
+        self.writeline(json.dumps({
+            "type": "YOUNICK",
+            "channel": channel,
+            "message": reason
+        }))
 
     def on_ban(self, channel):
         """
         Runs when you've been banned from a channel
         """
-        self.writeline("BAN %s you were banned in %s" % (channel.name, channel.name))
+        self.writeline(json.dumps({
+            "type": "YOUBAN",
+            "channel": channel
+        }))
 
     def on_sanick(self, new_nick):
         """
         Runs when a oper uses sanick on this client
         """
         self.writeline("Your nick was changed by a server admin to %s" % new_nick)
+        self.writeline(json.dumps({
+            "type": "YOUSANICK",
+            "new_nick": new_nick
+        }))
 
     def on_whois(self, client):
         """
         Runs when a user uses the whois command on this client
         """
-        client.writeline("WHOIS %s Nick: %s" % (self.nick, self.nick))
-        client.writeline("WHOIS %s IP: %s" % (self.nick, self.ip))
-        client.writeline("WHOIS %s Oper: %s" % (self.nick, self.is_oper))
-        client.writeline("WHOIS %s Logged In: %s" % (self.nick, bool(self.logged_in())))
+        client.writeline(json.dumps({
+            "type": "WHOIS",
+            "nick": self.nick,
+            "message": "Nick: %s" % (self.nick)
+        }))
+        client.writeline(json.dumps({
+            "type": "WHOIS",
+            "nick": self.nick,
+            "message": "IP: %s" % (self.ip)
+        }))
+        client.writeline(json.dumps({
+            "type": "WHOIS",
+            "nick": self.nick,
+            "message": "Oper: %s" % (self.is_oper)
+        }))
+        client.writeline(json.dumps({
+            "type": "WHOIS",
+            "nick": self.nick,
+            "message": "Logged In: %s" % (bool(self.logged_in()))
+        }))
         if self.logged_in():
-            client.writeline("WHOIS %s Account UUID: %s" % (self.nick, self.account["uuid"]))
+            client.writeline(json.dumps({
+                "type": "WHOIS",
+                "nick": self.nick,
+                "message": "Account UUID: %s" % (self.account["uuid"])
+            }))
 
     def on_sajoin(self, channel):
         """
         Runs when a server admin forces you into a channel
         """
         self.channels[channel] = self.server.channels[channel]
-        self.writeline("YOUSAJOIN you were forced to join %s" % channel)
+        self.writeline(json.dumps({
+            "type": "YOUSAJOIN",
+            "channel": channel
+        }))
 
     def on_sapart(self, channel):
         """
         Runs when a server admin forces you to leave a channel
         """
         del self.channels[channel]
-        self.writeline("YOUSAPART you were forced to leave %s" % channel)
+        self.writeline(json.dumps({
+            "type": "YOUSAPART",
+            "channel": channel
+        }))
 
     ##### Oper Commands #####
     def kill(self, nick):
@@ -278,12 +352,23 @@ class Client(threading.Thread):
         if self.is_oper:
             if nick in self.server.users.keys():
                 self.server.users[nick].on_kill("You were killed.")
-                self.writeline("You killed %s" % nick)
-                print("%s killed %s" % (self.nick, nick))
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You killed %s" % nick
+                }))
+                self.server.writeline("%s killed %s" % (self.nick, nick))
             else:
-                self.writeline("%s isn't on the server." % nick)
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("invalid channel/nick"),
+                    "message": "%s isn't on the server." % nick
+                }))
         else:
-            self.writeline("ERROR You need to be an oper to use this command")
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `kill` command"
+            }))
 
     def sanick(self, nick, new_nick):
         """
@@ -294,10 +379,17 @@ class Client(threading.Thread):
                 self.server.users[nick].nick = new_nick
                 self.server.users[nick].on_sanick(new_nick)
                 self.server.users[new_nick] = self.server.users[nick]
-                self.writeline("You changed %s nick to %s" % (nick, new_nick))
-                print("%s changed %s's nick to %s" % (self.nick, nick, new_nick))
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You changed %s nick to %s" % (nick, new_nick)
+                }))
+                self.server.writeline("%s changed %s's nick to %s" % (self.nick, nick, new_nick))
         else:
-            self.writeline("ERROR You need to be an oper to use this command")
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `sanick` command"
+            }))
 
     def sajoin(self, nick, channel):
         """
@@ -310,12 +402,30 @@ class Client(threading.Thread):
                     self.server.channels[channel].add_client(self.server.users[nick])
                     self.server.users[nick].on_sajoin(channel)
                     self.writeline("%s was forced to join %s" % (nick, channel))
+                    self.writeline(json.dumps({
+                        "type": "SERVERMSG",
+                        "message": "You forced %s to join %s" % (nick, channel)
+                    }))
+                    self.server.writeline("%s forced %s to join %s" %
+                        (self.nick, nick, channel))
                 else:
-                    self.writeline("%s isn't on the server" % nick)
+                    self.writeline(json.dumps({
+                        "type": "ERROR",
+                        "code": errorcodes.get("invalid channel/nick"),
+                        "message": "%s isn't on the server." % nick
+                    }))
             else:
-                self.writeline("%s doesn't exist" % channel)
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("invalid channel/nick"),
+                    "message": "%s doesn't exist" % channel
+                }))
         else:
-            self.writeline("ERROR You need to be an oper to use this command")
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `sajoin` command"
+            }))
 
     def sapart(self, nick, channel):
         """
@@ -327,12 +437,26 @@ class Client(threading.Thread):
                     self.server.channels[channel].on_part(self.server.users[nick], "sapart")
                     self.server.users[nick].on_sapart(channel)
                     self.writeline("You forced %s to leave %s" % (nick, channel))
+                    self.server.writeline("%s forced %s to leave %s" % (
+                        self.nick, nick, channel))
                 else:
-                    self.writeline("%s doesn't exist" % channel)
+                    self.writeline(json.dumps({
+                        "type": "ERROR",
+                        "code": errorcodes.get("invalid channel/nick"),
+                        "message": "%s isn't on the server." % nick
+                    }))
             else:
-                self.writeline("%s isn't on the server" % nick)
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("invalid channel/nick"),
+                    "message": "%s doesn't exist" % channel
+                }))
         else:
-            self.writeline("ERROR You need to be an oper to use this command")
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `sapart` command"
+            }))
 
     def ban_ip(self, ip):
         """
@@ -340,6 +464,13 @@ class Client(threading.Thread):
         """
         if self.is_oper:
             self.server.ban_ip(self, ip)
-            self.writeline("Banned %s from the server" % ip)
+            self.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "Banned %s from the server" % ip
+            }))
         else:
-            self.writeline("ERROR You need to be an oper to use this command")
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `ban` command"
+            }))
