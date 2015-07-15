@@ -1,4 +1,5 @@
 import json
+import errorcodes
 
 from collections import defaultdict
 
@@ -9,6 +10,7 @@ class Channel:
         k = key e.g password
         l = limit the amount of users
         O = server operators only
+        F = Redirects users to another channel
     """
     def __init__(self, name, flags={}, topic="", banlist=[], ops=[], owner=""):
         self.name = name
@@ -50,6 +52,11 @@ class Channel:
         to join the channel and they will recv a banned
         message from the channel
         """
+
+        if self.flags.get("F"): # If the forward flag is set
+            client.join(self.flags["F"])
+            return False
+
         print("%s %s joined %s" % (client.nick, client.ip, self.name))
         if client.ip not in self.banlist:
             if self.flags.get('O'):
@@ -90,6 +97,9 @@ class Channel:
                 else: # if no limit or within
                     self.add_client(client)
                     return True
+            else:
+                self.add_client(client)
+                return True
         else:
             client.writeline(json.dumps({
                 "type": "YOUCHANBANNED",
@@ -378,6 +388,29 @@ class Channel:
                 "channel": self.name,
                 "message": "not an operator"
             }))
+
+    def register(self, client):
+        """
+        Gives ownership of the channel to an account
+        """
+        if self.owner: # If the channel is already regsitered to someone else
+            client.writeline(json.dumps({
+                "type": "SEVREMSG",
+                "message": "%s is already registered to %s" % (self.name, self.owner)
+            }))
+        else: # If the channel is not registered
+            if client.logged_in():
+                self.owner = client.account["uuid"]
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You registered %s" % self.name
+                }))
+                self.save()
+            else:
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You need to be logged in to register a channel"
+                }))
 
     def save(self):
         """

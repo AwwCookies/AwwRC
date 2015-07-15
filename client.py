@@ -81,6 +81,7 @@ class Client(threading.Thread):
             cmd = self.readline()
             # Read data from the socket and process it
             while True:
+                # NOTE: Basic Commands
                 args = cmd.split(" ")
                 if 'quit' == cmd:
                     self.writeline('Ok, bye')
@@ -93,6 +94,26 @@ class Client(threading.Thread):
                 elif 'login' == args[0]:
                     self.server.client_login(
                         self, hashlib.md5(' '.join(args[1:])).hexdigest())
+                elif 'msg' == args[0]:
+                    self.message_nick(args[1], ' '.join(args[2:]))
+                elif 'channels' == args[0]:
+                    self.writeline("You're in: %s" % self.channels.keys())
+                elif 'oper?' == args[0]:
+                    self.writeline("Oper: %s" % str(self.is_oper()))
+                elif 'whois' == args[0]:
+                    self.server.client_whois(self, args[1])
+                elif 'flags' == args[0]:
+                    self.writeline("FLAGS %s %s" % (self.nick, self.flags))
+
+                # NOTE: Channel Commands
+                elif 'join' == args[0]:
+                    self.join(
+                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+                elif 'part' == args[0]:
+                    self.part(
+                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
+                elif 'chanmsg' == args[0]:
+                    self.message_channel(args[1], ' '.join(args[2:]))
                 elif 'kick' == args[0]:
                     if args[1] in self.channels:
                         self.channels[args[1]].kick_user(
@@ -109,24 +130,9 @@ class Client(threading.Thread):
                         self.channels[args[1]].unban_ip(self, args[2])
                     else:
                         self.writeline("You are not in %s" % args[1])
-                elif 'msg' == args[0]:
-                    self.message_nick(args[1], ' '.join(args[2:]))
-                elif 'chanmsg' == args[0]:
-                    self.message_channel(args[1], ' '.join(args[2:]))
-                elif 'channels' == args[0]:
-                    self.writeline("You're in: %s" % self.channels.keys())
-                elif 'oper?' == args[0]:
-                    self.writeline("Oper: %s" % str(self.is_oper()))
-                elif 'whois' == args[0]:
-                    self.server.client_whois(self, args[1])
-                elif 'join' == args[0]:
-                    self.join(
-                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-                elif 'part' == args[0]:
-                    self.part(
-                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-                elif 'flags' == args[0]:
-                    self.writeline("FLAGS %s %s" % (self.nick, self.flags))
+                elif 'chanregister' == args[0]:
+                    self.register_channel(args[1])
+
                 # NOTE: Oper Commands
                 elif 'oper' == args[0]:
                     self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
@@ -236,7 +242,8 @@ class Client(threading.Thread):
         else:
             if self.server.CONFIG.get("CHANNEL_CREATION"):
                 self.server.create_channel(self, channel)
-                self.channels[channel] = self.server.channels[channel]
+                # self.channels[channel] = self.server.channels[channel]
+                self.join(channel, key)
             else:
                 self.writeline(json.dumps({
                     "type": "SERVERMSG",
@@ -511,4 +518,17 @@ class Client(threading.Thread):
                 "type": "ERROR",
                 "code": errorcodes.get("not an oper"),
                 "message": "You need to be an oper to use the `announcement` command"
+            }))
+
+    def register_channel(self, chan_name):
+        """
+        Register a channel on the server
+        """
+        if chan_name in self.channels:
+            self.channels[chan_name].register(self)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "You're not in %s" % chan_name
             }))

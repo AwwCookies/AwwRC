@@ -9,3 +9,4 @@
 - [x] format all messages sent to a client to JSON
 - [x] implement server limit on number of users
 - [x] Allow opers to send messages to all users connected to the server e.g server announcements
+- [ ] Allow logged in users to register a channel

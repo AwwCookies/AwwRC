@@ -198,8 +198,10 @@ class Server:
             }))
 
     def create_channel(self, client, name, flags={}, topic=""):
+        print(self.channels)
         if name not in self.channels.keys():
             self.channels[name] = Channel(name, flags, topic)
+            self.channels[name].save()
             self.writeline("%s created a new channel %s" % (client.nick, name))
         else:
             client.writeline(json.dumps({
@@ -216,7 +218,11 @@ class Server:
         self.writeline("Added %s to banlist.txt" % ip)
 
     def set_motd(self, motd):
-        pass
+        """
+        Sets the message of the day
+        """
+        with open("motd.txt", 'w') as f:
+            f.write(motd)
 
     def writeline(self, message):
         print(message)
