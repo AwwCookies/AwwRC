@@ -9,4 +9,6 @@
 - [x] format all messages sent to a client to JSON
 - [x] implement server limit on number of users
 - [x] Allow opers to send messages to all users connected to the server e.g server announcements
-- [ ] Allow logged in users to register a channel
+- [x] Allow logged in users to register a channel
+- [ ] Add list command to server. This will display all public channels
+- [ ] Add a private flag to channels so they can choose to not show up in the channel list

@@ -72,7 +72,11 @@ class Server:
         return channels
 
     def register_client(self, client):
-        if len(self.clients) > self.CONFIG["SERVER_MAX_USERS"]:
+        if len(self.clients) >= self.CONFIG["SERVER_MAX_USERS"]:
+            client.writeline(json.dumps({
+                "type": "SERVERFULL"
+            }))
+            client.quit()
             return False
         banlist = [ip.strip() for ip in open("./banlist.txt").readlines()]
         # if this client is banned tell them to GTFO and disconnect them
