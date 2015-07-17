@@ -88,6 +88,8 @@ class Client(threading.Thread):
                     return
                 elif 'nick' == cmd:
                     self.writeline("Your nick is: %s" % self.nick)
+                elif 'chanlist' == args[0]:
+                    self.server.channel_list(self)
                 elif 'register' == args[0]:
                     self.server.register_account(self, args[1],
                                                  hashlib.md5(' '.join(args[2:])).hexdigest())
@@ -135,7 +137,8 @@ class Client(threading.Thread):
 
                 # NOTE: Oper Commands
                 elif 'oper' == args[0]:
-                    self.oper(hashlib.md5(' '.join(args[1:])).hexdigest())
+                    self.server.oper(
+                        self, hashlib.md5(' '.join(args[1:])).hexdigest())
                 elif 'kill' == args[0]:
                     self.kill(args[1])
                 elif 'sanick' == args[0]:
@@ -193,34 +196,6 @@ class Client(threading.Thread):
         '''
         self.client.send(text.strip() + '\n')
 
-    def message_nick(self, nick, message):
-        """
-        Sends a message to a specific user on the server
-        """
-        self.server.client_message_nick(self, nick, message)
-
-    def message_channel(self, channel, message):
-        """
-        Sends a message to a channel on the server
-        """
-        self.server.client_message_channel(self, channel, message)
-
-    def oper(self, hashedpw):
-        """
-        Turns the client into an oper (Server Operator)
-        """
-        if self.server.oper(self, hashedpw):
-            self.flags.append("O")
-            self.writeline(json.dumps({
-                "type": "SERVERMSG",
-                "message": "You are now an oper!"
-            }))
-            self.join(self.server.CONFIG["SERVER_ADMIN_CHANNEL"])
-            self.server.writeline("%s oppered" % self.nick)
-        else:
-            self.writeline("Invalid credentials")
-            self.server.writeline("%s failed to oper" % self.nick)
-
     def join(self, channel, key=None):
         """
         Joins the client to a channel on the server
@@ -267,6 +242,34 @@ class Client(threading.Thread):
                 "type": "SERVERMSG",
                 "message": "You are not in %s" % channel
             }))
+
+    def add_flag(self, flag):
+        """
+        Gives this client a flag
+        """
+        if not flag in self.flags:
+            self.flags.append(flag)
+
+    def add_flags(self, flags):
+        """
+        Gives this client a flag
+        """
+        for flag in flags:
+            self.add_flag(flag)
+
+    def remove_flag(self, flag):
+        """
+        Removes a flag from this client
+        """
+        if flag in self.flags:
+            self.flags.remove(flag)
+
+    def remove_flags(self, flags):
+        """
+        Removes flags from this client
+        """
+        for flag in flags:
+            self.remove_flag(flag)
 
     def quit(self):
         """
@@ -340,11 +343,23 @@ class Client(threading.Thread):
             "nick": self.nick,
             "message": "Logged In: %s" % (bool(self.logged_in()))
         }))
+        if not 'i' in self.flags or client.is_oper():
+            client.writeline(json.dumps({
+                "type": "WHOIS",
+                "nick": self.nick,
+                "message": "Channels: %s" % ', '.join(self.channels)
+            }))
         if self.logged_in():
             client.writeline(json.dumps({
                 "type": "WHOIS",
                 "nick": self.nick,
                 "message": "Account UUID: %s" % (self.account["uuid"])
+            }))
+        if client.is_oper():
+            client.writeline(json.dumps({
+                "type": "WHOIS",
+                "nick": self.nick,
+                "message": "Flags: %s" % ', '.join(self.flags)
             }))
 
     def on_sajoin(self, channel):
@@ -531,4 +546,37 @@ class Client(threading.Thread):
                 "type": "ERROR",
                 "code": errorcodes.get("invalid channel/nick"),
                 "message": "You're not in %s" % chan_name
+            }))
+
+    def message_nick(self, nick, message):
+        """
+        Sends a message to another client on the server
+        nick: nick of the client you want to message
+        message: the message you want to send to that client
+        """
+        if nick in self.server.users.keys():
+            self.server.users[nick].writeline(json.dumps({
+                "type": "USERMSG",
+                "nick": self.nick,
+                "ip": self.ip,
+                "message": message
+            }))
+        else:
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "%s isn't on the server" % self.nick
+            }))
+
+    def message_channel(self, channel, message):
+        """
+        Sends a message to a channel on the server
+        """
+        if channel in self.server.channels.keys():
+            self.server.channels[channel].on_message(self, message)
+        else:
+            client.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "No channel named %s" % channel
             }))

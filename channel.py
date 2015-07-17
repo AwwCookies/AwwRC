@@ -11,6 +11,7 @@ class Channel:
         l = limit the amount of users
         O = server operators only
         F = Redirects users to another channel
+        p = prevents the channel from showing in the public list
     """
     def __init__(self, name, flags={}, topic="", banlist=[], ops=[], owner=""):
         self.name = name
@@ -264,7 +265,11 @@ class Channel:
         Sends a message to all users in this channel
         """
         for client in self.clients:
-            client.writeline(message)
+            try:
+                client.writeline(message)
+            except:
+                self.on_part(client, "error")
+                client.quit()
 
     def is_op(self, client):
         """

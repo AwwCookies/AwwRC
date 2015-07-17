@@ -26,10 +26,12 @@ class Server:
         self.sock = None
         self.clients = []
         self.users = {}
+        self.opers = []
         self.channels = self.load_channels()
         print self.CONFIG
         self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(
-            self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True}, "Server Admin Channel")
+            self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True, "p": True}, "Server Admin Channel")
+        os.system("fuser %s/tcp -k" % self.CONFIG["PORT"]) # kill app running on the port
 
     def rehash(self, client):
         """
@@ -51,6 +53,7 @@ class Server:
             "MAX_RECV_SIZE": int(tconfig["MAX_RECV_SIZE"]) if tconfig.get("MAX_RECV_SIZE") else 1024,
             "SERVER_ADMIN_CHANNEL": tconfig["SERVER_ADMIN_CHANNEL"] if tconfig.get("SERVER_ADMIN_CHANNEL") else "&ADMIN",
             "SERVER_MAX_USERS": int(tconfig["SERVER_MAX_USERS"]) if tconfig.get("SERVER_MAX_USERS") else 100,
+            "DEFUALT_OPER_FLAGS": tconfig["DEFUALT_OPER_FLAGS"] if tconfig.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
         }
         return config
 
@@ -72,6 +75,7 @@ class Server:
         return channels
 
     def register_client(self, client):
+        # if the server is full tell the client and disconnect them
         if len(self.clients) >= self.CONFIG["SERVER_MAX_USERS"]:
             client.writeline(json.dumps({
                 "type": "SERVERFULL"
@@ -148,37 +152,39 @@ class Server:
                 "message": "account %s not found." % client.nick
             }))
 
-    def client_message_nick(self, client, nick, message):
-        if nick in self.users.keys():
-            self.users[nick].writeline(json.dumps({
-                "type": "USERMSG",
-                "nick": client.nick,
-                "ip": client.ip,
-                "message": message
-            }))
-        else:
-            client.writeline(json.dumps({
-                "type": "ERROR",
-                "code": errorcodes.get("invalid channel/nick"),
-                "message": "%s isn't on the server" % client.nick
-            }))
-
-    def client_message_channel(self, client, channel, message):
-        if channel in self.channels.keys():
-            self.channels[channel].on_message(client, message)
-        else:
-            client.writeline(json.dumps({
-                "type": "ERROR",
-                "code": errorcodes.get("invalid channel/nick"),
-                "message": "No channel named %s" % channel
-            }))
-
     def oper(self, client, hashedpw):
+        """
+        Turns the client into an oper (Server Operator)
+        """
         self.writeline("%s used the oper command" % client.ip)
-        for oper in [op.strip() for op in open("./opers.txt", "r").readlines()]:
-            if client.ip + '|' + hashedpw == oper:
-                return True
+        oper_blocks = [op.strip() for op in open("./opers.txt", "r").readlines()]
+        if client.ip + '|' + hashedpw in oper_blocks:
+            client.add_flag('O')
+            client.add_flags(self.CONFIG["DEFUALT_OPER_FLAGS"])
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You are now an oper!"
+            }))
+            client.join(self.CONFIG["SERVER_ADMIN_CHANNEL"])
+            self.writeline("%s oppered" % client.nick)
+            self.opers.append(client)
+        else:
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "invalid oper credentials"
+            }))
+            self.writeline("%s failed to oper" % client.nick)
 
+    def oper_message(self, message):
+        """
+        Sends a message to all opers with `w` flag
+        """
+        for oper in self.opers:
+            if 'w' in oper.flags:
+                oper.writeline(json.dumps({
+                    "type": "OPERMSG",
+                    "message": message
+                }))
 
     def server_announcement(self, message):
         """
@@ -202,7 +208,6 @@ class Server:
             }))
 
     def create_channel(self, client, name, flags={}, topic=""):
-        print(self.channels)
         if name not in self.channels.keys():
             self.channels[name] = Channel(name, flags, topic)
             self.channels[name].save()
@@ -237,6 +242,23 @@ class Server:
             "message": message
         }))
 
+    def channel_list(self, client):
+        """
+        Sends a list of all public channels to the client
+        Sends a list of all channels to a client that is an oper
+        """
+        chans = []
+        for chan in self.channels:
+            # if the channel is not private
+            if not self.channels[chan].flags.get('p'):
+                chans.append(chan)
+            elif client.is_oper():  # opers can see all channels
+                chans.append(chan)
+        client.writeline(json.dumps({
+            "type": "CHANLIST",
+            "channels": chans
+        }))
+
     def run(self):
         '''
         Server main loop.
@@ -258,7 +280,7 @@ class Server:
                 self.sock.bind((self.CONFIG["ADDRESS"], self.CONFIG["PORT"]))
                 # Listen for incoming connections. This server can handle up to
                 # 5 simultaneous connections
-                self.sock.listen(5)
+                self.sock.listen(50)
                 all_good = True
                 break
             except socket.error, err:
@@ -268,15 +290,7 @@ class Server:
                 time.sleep(10)
                 try_count += 1
 
-        print "Server is listening for incoming connections."
-        print "Try to connect through the command line, with:"
-        print "telnet localhost 5050"
-        print "and then type whatever you want."
-        print
-        print "typing 'bye' finishes the thread, but not the server ",
-        print "(eg. you can quit telnet, run it again and get a different ",
-        print "thread name"
-        print "typing 'quit' finishes the server"
+        print ("`telnet %s %s`" % (self.CONFIG["ADDRESS"], self.CONFIG["PORT"]))
 
         try:
             while True:

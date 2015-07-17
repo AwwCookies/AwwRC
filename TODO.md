@@ -10,5 +10,16 @@
 - [x] implement server limit on number of users
 - [x] Allow opers to send messages to all users connected to the server e.g server announcements
 - [x] Allow logged in users to register a channel
-- [ ] Add list command to server. This will display all public channels
-- [ ] Add a private flag to channels so they can choose to not show up in the channel list
+- [x] Add list command to server. This will display all public channels
+- [x] Add a private flag to channels so they can choose to not show up in the channel list
+- [ ] Add the ability to limit connections by IP
+- [ ] Add I:Lines to exempt an IP from a connection limit
+- [ ] implement flood control and join throttling on channels
+- [x] create a message all opers method in server.py
+- [x] whois shows user modes for opers
+- [x] whois shows channels the user is in
+- [x] add user flag `i` to hide their channels in their whois
+- [ ] vhost for logged in users
+- [ ] add a badword list to channels
+- [ ] implement nick/channel name restrictions
+- [ ] implement getting names of all users in a channel
