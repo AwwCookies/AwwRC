@@ -7,5 +7,6 @@
     "MAX_RECV_SIZE": 1024,
     "SERVER_ADMIN_CHANNEL": "&SA",
     "SERVER_MAX_USERS": 100,
-    "DEFUALT_OPER_FLAGS": ["k", "w"]
+    "DEFUALT_OPER_FLAGS": ["k", "w"],
+    "BANLIST": "banlist.txt"
 }

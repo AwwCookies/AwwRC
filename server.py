@@ -28,7 +28,7 @@ class Server:
         self.users = {}
         self.opers = []
         self.channels = self.load_channels()
-        print self.CONFIG
+        print(self.CONFIG)
         self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(
             self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True, "p": True}, "Server Admin Channel")
         os.system("fuser %s/tcp -k" % self.CONFIG["PORT"]) # kill app running on the port
@@ -54,6 +54,7 @@ class Server:
             "SERVER_ADMIN_CHANNEL": tconfig["SERVER_ADMIN_CHANNEL"] if tconfig.get("SERVER_ADMIN_CHANNEL") else "&ADMIN",
             "SERVER_MAX_USERS": int(tconfig["SERVER_MAX_USERS"]) if tconfig.get("SERVER_MAX_USERS") else 100,
             "DEFUALT_OPER_FLAGS": tconfig["DEFUALT_OPER_FLAGS"] if tconfig.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
+            "BANLIST": tconfig["BANLIST"] if tconfig.get("BANLIST") else 'banlist.txt',
         }
         return config
 
