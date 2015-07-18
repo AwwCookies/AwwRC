@@ -8,5 +8,7 @@
     "SERVER_ADMIN_CHANNEL": "&SA",
     "SERVER_MAX_USERS": 100,
     "DEFUALT_OPER_FLAGS": ["k", "w"],
-    "BANLIST": "banlist.txt"
+    "BANLIST": "banlist.txt",
+    "CONNECTION_LIMIT": 2,
+    "I:LINES": "ilines.txt"
 }

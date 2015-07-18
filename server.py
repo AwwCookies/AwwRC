@@ -27,11 +27,11 @@ class Server:
         self.clients = []
         self.users = {}
         self.opers = []
+        self.ips = []
         self.channels = self.load_channels()
         print(self.CONFIG)
         self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(
             self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True, "p": True}, "Server Admin Channel")
-        os.system("fuser %s/tcp -k" % self.CONFIG["PORT"]) # kill app running on the port
 
     def rehash(self, client):
         """
@@ -43,7 +43,7 @@ class Server:
 
     def load_config(p="./config.json"):
         config = {}
-        tconfig = json.loads(open("./config.json", 'r').read())
+        tconfig = json.load(open("./config.json", 'r'))
         config = {
             "PORT": tconfig["PORT"] if tconfig.get("PORT") else 5050,
             "TIMEOUT": tconfig["TIMEOUT"] if tconfig.get("TIMEOUT") else 0.5,
@@ -55,6 +55,8 @@ class Server:
             "SERVER_MAX_USERS": int(tconfig["SERVER_MAX_USERS"]) if tconfig.get("SERVER_MAX_USERS") else 100,
             "DEFUALT_OPER_FLAGS": tconfig["DEFUALT_OPER_FLAGS"] if tconfig.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
             "BANLIST": tconfig["BANLIST"] if tconfig.get("BANLIST") else 'banlist.txt',
+            "I:LINES": tconfig["I:LINES"] if tconfig.get("I:LINES") else 'ilines.txt',
+            "CONNECTION_LIMIT": int(tconfig["CONNECTION_LIMIT"]) if tconfig.get("CONNECTION_LIMIT") else 5,
         }
         return config
 
@@ -66,7 +68,7 @@ class Server:
         channels = {}
         for c in glob.glob("channels/*.json"):
             try:
-                channel = json.loads(open(c, 'r').read())
+                channel = json.load(open(c, 'r'))
                 channels[channel["name"]] = Channel(
                     channel["name"], channel["flags"], channel["topic"],
                     channel["banlist"], channel["ops"], channel["owner"])
@@ -83,25 +85,42 @@ class Server:
             }))
             client.quit()
             return False
-        banlist = [ip.strip() for ip in open("./banlist.txt").readlines()]
+        # if too many connections from this IP disconnect client
+        # if the client doesn't have an I:Line
+        if not client.ip in [ip.strip() for ip in open(self.CONFIG["I:LINES"], 'r').readlines()]:
+            # See if IP breaks connection limit
+            if (self.ips.count(client.ip) + 1) > self.CONFIG["CONNECTION_LIMIT"]:
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "Too many connections from this IP"
+                }))
+                client.quit()
+                return False
         # if this client is banned tell them to GTFO and disconnect them
-        if client.ip in banlist:
+        if client.ip in [ip.strip() for ip in open(self.CONFIG["BANLIST"], 'r').readlines()]:
             self.writeline("%s is banned." % (client.ip))
             client.writeline(
-                json.dumps({"type": "YOURSERVERBAN", "ip": client.ip}))
+                json.dumps({"type": "YOUSERVERBAN", "ip": client.ip}))
             client.quit()
             return False
         else:
             self.users[client.nick] = client
+            self.ips.append(client.ip)
             self.writeline("%s is registered as %s" % (client.ip, client.nick))
             if os.path.exists("motd.txt"):
                 for line in open("motd.txt", 'r').readlines():
-                    client.writeline(
-                        json.dumps({"type": "SERVERMOTD", "message": line}))
-            client.writeline(
-                json.dumps({"type": "SERVERCONFIG", "config": json.dumps(self.CONFIG)}))
-            client.writeline(
-                json.dumps({"type": "SERVERUSERS", "amount": len(self.clients)}))
+                    client.writeline(json.dumps({
+                        "type": "SERVERMOTD",
+                        "message": line.strip()
+                    }))
+            client.writeline(json.dumps({
+                "type": "SERVERCONFIG",
+                "config": json.dumps(self.CONFIG)
+            }))
+            client.writeline(json.dumps({
+                "type": "SERVERUSERS",
+                "amount": len(self.clients)
+            }))
             return True
 
     def register_account(self, client, email, hashedpw):
@@ -129,8 +148,7 @@ class Server:
 
     def client_login(self, client, hashedpw):
         if os.path.exists("accounts/%s.json" % client.nick):
-            user = json.loads(
-                open("accounts/%s.json" % client.nick, 'r').read())
+            user = json.load(open("accounts/%s.json" % client.nick, 'r'))
             if hashedpw == user["password"]:
                 client.account = user
                 client.writeline(json.dumps({
@@ -158,7 +176,8 @@ class Server:
         Turns the client into an oper (Server Operator)
         """
         self.writeline("%s used the oper command" % client.ip)
-        oper_blocks = [op.strip() for op in open("./opers.txt", "r").readlines()]
+        oper_blocks = [op.strip()
+                       for op in open("./opers.txt", "r").readlines()]
         if client.ip + '|' + hashedpw in oper_blocks:
             client.add_flag('O')
             client.add_flags(self.CONFIG["DEFUALT_OPER_FLAGS"])
@@ -291,7 +310,8 @@ class Server:
                 time.sleep(10)
                 try_count += 1
 
-        print ("`telnet %s %s`" % (self.CONFIG["ADDRESS"], self.CONFIG["PORT"]))
+        print ("`telnet %s %s`" %
+               (self.CONFIG["ADDRESS"], self.CONFIG["PORT"]))
 
         try:
             while True:

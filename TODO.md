@@ -12,8 +12,8 @@
 - [x] Allow logged in users to register a channel
 - [x] Add list command to server. This will display all public channels
 - [x] Add a private flag to channels so they can choose to not show up in the channel list
-- [ ] Add the ability to limit connections by IP
-- [ ] Add I:Lines to exempt an IP from a connection limit
+- [x] Add the ability to limit connections by IP
+- [x] Add I:Lines to exempt an IP from a connection limit
 - [ ] implement flood control and join throttling on channels
 - [x] create a message all opers method in server.py
 - [x] whois shows user modes for opers
