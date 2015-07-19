@@ -10,5 +10,8 @@
     "DEFUALT_OPER_FLAGS": ["k", "w"],
     "BANLIST": "banlist.txt",
     "CONNECTION_LIMIT": 2,
-    "I:LINES": "ilines.txt"
+    "I:LINES": "ilines.txt",
+    "CHAN_BAN_LIMIT": 50,
+    "CHAN_BADWORD_LIMIT": 50,
+    "CHAN_TOPIC_LIMIT": 300
 }

@@ -20,6 +20,9 @@
 - [x] whois shows channels the user is in
 - [x] add user flag `i` to hide their channels in their whois
 - [ ] vhost for logged in users
-- [ ] add a badword list to channels
+- [x] add a badword list to channels
 - [ ] implement nick/channel name restrictions
 - [ ] implement getting names of all users in a channel
+- [ ] convert replies in client.py to JSON
+- [x] rename server announcements to global messages
+- [ ] fix sending of MOTD to client

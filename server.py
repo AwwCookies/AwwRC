@@ -30,7 +30,7 @@ class Server:
         self.ips = []
         self.channels = self.load_channels()
         print(self.CONFIG)
-        self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(
+        self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(self,
             self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True, "p": True}, "Server Admin Channel")
 
     def rehash(self, client):
@@ -42,23 +42,24 @@ class Server:
             self.CONFIG = self.load_config()
 
     def load_config(p="./config.json"):
-        config = {}
-        tconfig = json.load(open("./config.json", 'r'))
-        config = {
-            "PORT": tconfig["PORT"] if tconfig.get("PORT") else 5050,
-            "TIMEOUT": tconfig["TIMEOUT"] if tconfig.get("TIMEOUT") else 0.5,
-            "ADDRESS": tconfig["ADDRESS"] if tconfig.get("ADDRESS") else "127.0.0.1",
-            "MAX_NICK_LENGTH": int(tconfig["MAX_NICK_LENGTH"]) if tconfig.get("MAX_NICK_LENGTH") else 12,
-            "CHANNEL_CREATION": tconfig["CHANNEL_CREATION"] if tconfig.get("CHANNEL_CREATION") else False,
-            "MAX_RECV_SIZE": int(tconfig["MAX_RECV_SIZE"]) if tconfig.get("MAX_RECV_SIZE") else 1024,
-            "SERVER_ADMIN_CHANNEL": tconfig["SERVER_ADMIN_CHANNEL"] if tconfig.get("SERVER_ADMIN_CHANNEL") else "&ADMIN",
-            "SERVER_MAX_USERS": int(tconfig["SERVER_MAX_USERS"]) if tconfig.get("SERVER_MAX_USERS") else 100,
-            "DEFUALT_OPER_FLAGS": tconfig["DEFUALT_OPER_FLAGS"] if tconfig.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
-            "BANLIST": tconfig["BANLIST"] if tconfig.get("BANLIST") else 'banlist.txt',
-            "I:LINES": tconfig["I:LINES"] if tconfig.get("I:LINES") else 'ilines.txt',
-            "CONNECTION_LIMIT": int(tconfig["CONNECTION_LIMIT"]) if tconfig.get("CONNECTION_LIMIT") else 5,
+        config = json.load(open("./config.json", 'r'))
+        return {
+            "PORT": config["PORT"] if config.get("PORT") else 5050,
+            "TIMEOUT": config["TIMEOUT"] if config.get("TIMEOUT") else 0.5,
+            "ADDRESS": config["ADDRESS"] if config.get("ADDRESS") else "127.0.0.1",
+            "MAX_NICK_LENGTH": int(config["MAX_NICK_LENGTH"]) if config.get("MAX_NICK_LENGTH") else 12,
+            "CHANNEL_CREATION": config["CHANNEL_CREATION"] if config.get("CHANNEL_CREATION") else False,
+            "MAX_RECV_SIZE": int(config["MAX_RECV_SIZE"]) if config.get("MAX_RECV_SIZE") else 1024,
+            "SERVER_ADMIN_CHANNEL": config["SERVER_ADMIN_CHANNEL"] if config.get("SERVER_ADMIN_CHANNEL") else "&ADMIN",
+            "SERVER_MAX_USERS": int(config["SERVER_MAX_USERS"]) if config.get("SERVER_MAX_USERS") else 100,
+            "DEFUALT_OPER_FLAGS": config["DEFUALT_OPER_FLAGS"] if config.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
+            "BANLIST": config["BANLIST"] if config.get("BANLIST") else 'banlist.txt',
+            "I:LINES": config["I:LINES"] if config.get("I:LINES") else 'ilines.txt',
+            "CONNECTION_LIMIT": int(config["CONNECTION_LIMIT"]) if config.get("CONNECTION_LIMIT") else 5,
+            "CHAN_TOPIC_LIMIT": int(config["CHAN_TOPIC_LIMIT"]) if config.get("CHAN_TOPIC_LIMIT") else 300,
+            "CHAN_BAN_LIMIT": int(config["CHAN_BAN_LIMIT"]) if config.get("CHAN_BAN_LIMIT") else 50,
+            "CHAN_BADWORD_LIMIT": int(config["CHAN_BADWORD_LIMIT"]) if config.get("CHAN_BADWORD_LIMIT") else 50,
         }
-        return config
 
     def load_channels(self):
         """
@@ -69,9 +70,10 @@ class Server:
         for c in glob.glob("channels/*.json"):
             try:
                 channel = json.load(open(c, 'r'))
-                channels[channel["name"]] = Channel(
+                channels[channel["name"]] = Channel(self,
                     channel["name"], channel["flags"], channel["topic"],
-                    channel["banlist"], channel["ops"], channel["owner"])
+                    channel["banlist"], channel["ops"], channel["owner"],
+                    channel["badwords"])
                 print("Loaded channel %s from %s" % (channel["name"], c))
             except:
                 print("Failed to load channel json %s" % c)
@@ -206,7 +208,7 @@ class Server:
                     "message": message
                 }))
 
-    def server_announcement(self, message):
+    def global_message(self, message):
         """
         Send a message to all clients connected to the server
         """
@@ -229,7 +231,7 @@ class Server:
 
     def create_channel(self, client, name, flags={}, topic=""):
         if name not in self.channels.keys():
-            self.channels[name] = Channel(name, flags, topic)
+            self.channels[name] = Channel(self, name, flags, topic)
             self.channels[name].save()
             self.writeline("%s created a new channel %s" % (client.nick, name))
         else:

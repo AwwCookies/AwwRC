@@ -65,6 +65,7 @@ class Client(threading.Thread):
     def logged_in(self):
         return self.account
 
+
     def run(self):
         '''
         Thread's main loop. Once this function returns, the thread is finished
@@ -78,99 +79,224 @@ class Client(threading.Thread):
             }))
             self.set_nick(self, self.readline())
             # Need to declare QUIT as global, since the method can change it
-            cmd = self.readline()
             # Read data from the socket and process it
             while True:
-                # NOTE: Basic Commands
-                args = cmd.split(" ")
-                if 'quit' == cmd:
-                    self.writeline('Ok, bye')
-                    return
-                elif 'nick' == cmd:
-                    self.writeline("Your nick is: %s" % self.nick)
-                elif 'chanlist' == args[0]:
-                    self.server.channel_list(self)
-                elif 'register' == args[0]:
-                    self.server.register_account(self, args[1],
-                                                 hashlib.md5(' '.join(args[2:])).hexdigest())
-                elif 'login' == args[0]:
-                    self.server.client_login(
-                        self, hashlib.md5(' '.join(args[1:])).hexdigest())
-                elif 'msg' == args[0]:
-                    self.message_nick(args[1], ' '.join(args[2:]))
-                elif 'channels' == args[0]:
-                    self.writeline("You're in: %s" % self.channels.keys())
-                elif 'oper?' == args[0]:
-                    self.writeline("Oper: %s" % str(self.is_oper()))
-                elif 'whois' == args[0]:
-                    self.server.client_whois(self, args[1])
-                elif 'flags' == args[0]:
-                    self.writeline("FLAGS %s %s" % (self.nick, self.flags))
-
-                # NOTE: Channel Commands
-                elif 'join' == args[0]:
-                    self.join(
-                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-                elif 'part' == args[0]:
-                    self.part(
-                        args[1], ' '.join(args[2:]) if len(args) > 2 else None)
-                elif 'chanmsg' == args[0]:
-                    self.message_channel(args[1], ' '.join(args[2:]))
-                elif 'kick' == args[0]:
-                    if args[1] in self.channels:
-                        self.channels[args[1]].kick_user(
-                            self, args[2], ' '.join(args[3:]))
-                    else:
-                        self.writeline("You are not in %s" % args[1])
-                elif 'ban' == args[0]:
-                    if args[1] in self.channels:
-                        self.channels[args[1]].ban_user(self, args[2])
-                    else:
-                        self.writeline("You are not in %s" % args[1])
-                elif 'unban' == args[0]:
-                    if args[1] in self.channels:
-                        self.channels[args[1]].unban_ip(self, args[2])
-                    else:
-                        self.writeline("You are not in %s" % args[1])
-                elif 'chanregister' == args[0]:
-                    self.register_channel(args[1])
-
-                # NOTE: Oper Commands
-                elif 'oper' == args[0]:
-                    self.server.oper(
-                        self, hashlib.md5(' '.join(args[1:])).hexdigest())
-                elif 'kill' == args[0]:
-                    self.kill(args[1])
-                elif 'sanick' == args[0]:
-                    self.sanick(args[1], args[2])
-                elif 'sajoin' == args[0]:
-                    self.sajoin(args[1], args[2])
-                elif 'sapart' == args[0]:
-                    self.sapart(args[1], args[2])
-                elif 'chanflag' == args[0]:
-                    chan = args[2]
-                    nick = args[3]
-                    flag = args[4]
-                    if chan in self.channels.keys():
-                        if args[1] == "add":
-                            self.channels[chan].add_client_flag(
-                                self, nick, flag)
-                        elif args[1] == "remove":
-                            self.channels[chan].remove_client_flag(
-                                self, nick, flag)
-                    else:
-                        self.writeline("You are not in %s" % chan)
-                elif 'flags' == args[0]:
-                    self.writeline("FLAGS %s %s" % (self.nick, self.flags))
-                elif 'ban' == args[0]:
-                    self.ban_ip(args[1])
-                elif 'announcement' == args[0]:
-                    self.server_announcemet(' '.join(args[1]))
-                else:
-                    self.writeline("%s: invalid command" % args[0])
-
                 cmd = self.readline()
-
+                args = cmd.split(" ")
+                # Command `quit`
+                if args[0].lower() == "quit":
+                    if len(args) > 2:
+                        self.command_quit(message=' '.join(args[1:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: quit <message>"
+                        }))
+                # Command `chanlist`
+                elif args[0].lower() == "chanlist":
+                    self.command_channel_list()
+                # Command `register`
+                elif args[0].lower() == "register":
+                    if len(args) > 2:
+                        self.command_register(password=args[1], email=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: register <password> <email>"
+                        }))
+                # Command `login`
+                elif args[0].lower() == "login":
+                    if len(args) > 1:
+                        self.command_login(password=args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: login <password>"
+                        }))
+                # Command `usermsg`
+                elif args[0].lower() == "usermsg":
+                    if len(args) > 2:
+                        self.command_message_user(
+                            nick=args[1], message=' '.join(args[2:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: usermsg <nick> <message>"
+                        }))
+                # Command `whois`
+                elif args[0].lower() == "whois":
+                    if len(args) > 1:
+                        self.command_whois(nick=args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: whois <nick>"
+                        }))
+                # Command `chanjoin`
+                elif args[0].lower() == "chanjoin":
+                    if len(args) == 2:
+                        self.command_channel_join(
+                            chan_name=args[1], password=None)
+                    elif len(args) == 3:
+                        self.command_channel_join(
+                            chan_name=args[1], password=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanjoin <channel> [password]"
+                        }))
+                # Command `chanpart`
+                elif args[0].lower() == "chanpart":
+                    if len(args) > 2:
+                        self.command_channel_part(
+                            chan_name=args[1], message=' '.join(args[2:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanpart <channel> <message>"
+                        }))
+                # Command `chanmsg`
+                elif args[0].lower() == "chanmsg":
+                    if len(args) > 2:
+                        self.command_channel_message(
+                            chan_name=args[1], message=' '.join(args[2:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanmsg <channel> <message>"
+                        }))
+                # Command `chankick`
+                elif args[0].lower() == "chankick":
+                    if len(args) > 3:
+                        self.command_channel_kick(
+                            chan_name=args[1], nick=args[2],
+                            message=' '.join(args[3:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chankick <channel> <nick> <reason>"
+                        }))
+                # Command `chanban`
+                elif args[0] == "chanban":
+                    if len(args) > 2:
+                        self.command_channel_ban(
+                            chan_name=args[1], nick=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanban <channel> <nick>"
+                        }))
+                # Command `chanunban`
+                elif args[0].lower() == "chanunban":
+                    if len(args) > 2:
+                        self.command_channel_unban(
+                            chan_name=args[1], ip=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanunban <channel> <IP>"
+                        }))
+                # Command `chanregister`
+                elif args[0].lower() == "chanregister":
+                    if len(args) > 1:
+                        self.command_channel_register(chan_name=args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanregister <channel>"
+                        }))
+                # Command `chanbadword`
+                elif args[0].lower() == "chanbadword":
+                    if len(args) > 3:
+                        self.command_channel_badword(
+                            chan_name=args[1], switch=args[2],
+                            badword=args[3])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMGS",
+                            "message": "help: chanbadword <channel> <add/remove> <word>"
+                        }))
+                elif args[0].lower() == "chanflag":
+                    if len(args) > 4:
+                        self.command_channel_clientflag(
+                            chan_name=args[1], switch=args[2],
+                            nick=args[3], flag=args[4])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanflag <channel> <add/remove> <nick> <flag>"
+                        }))
+                # Command `oper`
+                elif args[0].lower() == "oper":
+                    if len(args) > 1:
+                        self.command_oper(args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: oper <password>"
+                        }))
+                # Command `kill`
+                elif args[0].lower() == "kill":
+                    if len(args) > 1:
+                        self.command_oper_kill(args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: kill <nick>"
+                        }))
+                # Command `sanick`
+                elif args[0].lower() == "sanick":
+                    if len(args) > 2:
+                        self.command_oper_sanick(
+                            nick=args[1], new_nick=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: sanick <nick> <new nick>"
+                        }))
+                # Command `sajoin`
+                elif args[0].lower() == "sajoin":
+                    if len(args) > 2:
+                        self.command_oper_sajoin(
+                            nick=args[1], chan_name=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: sajoin <nick> <channel>"
+                        }))
+                # Command `sapart`
+                elif args[0].lower() == "sapart":
+                    if len(args) > 2:
+                        self.command_oper_sapart(
+                            nick=args[1], chan_name=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: sapart <nick> <channel>"
+                        }))
+                # Command `serverban`
+                elif args[0].lower() == "serverban":
+                    if len(args) > 1:
+                        self.command_oper_server_ban(ip=args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: serverban <IP>"
+                        }))
+                # Command `globalmsg`
+                elif args[0].lower() == "globalmsg":
+                    if len(args) > 1:
+                        self.command_oper_global_message(
+                            message=' '.join(args[1:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: globalmsg <message>"
+                        }))
+                else:
+                    self.writeline(json.dumps({
+                        "type": "INVALIDCOMMAND"
+                    }))
             # Make sure the socket is closed once we're done with it
             self.client.close()
             return
@@ -178,6 +304,241 @@ class Client(threading.Thread):
             print err
             self.client.close()
             return
+
+# Commands
+
+    def command_quit(self, message="bye bye"):
+        """
+        Disconnects the client from the server
+        """
+        self.writeline(json.dumps({
+            "type": "YOUQUIT",
+            "message": message
+        }))
+
+    def command_channel_list(self):
+        """
+        Sends the client the server channel list
+        Public channels if the client isn't an oper
+        All channels if the client is an oper
+        """
+        self.server.channel_list(self)
+
+    def command_register(self, password, email):
+        """
+        Register an account with the server
+        password: plain text password
+        email: email address of the user
+        """
+        hashedpw = hashlib.md5(password).hexdigest()
+        self.server.register_account(self, email, password)
+
+    def command_login(self, password):
+        """
+        Login into the server
+        password: plain text password
+        """
+        hashedpw = hashlib.md5(password).hexdigest()
+        self.server.client_login(self, hashedpw)
+
+    def command_message_user(self, nick, message):
+        """
+        Send a message to other user on this server
+        nick: nick of client you want to send the message to
+        message: the message you want to send to that client
+        """
+        self.message_nick(nick, message)
+
+    def command_whois(self, nick):
+        """
+        Get WHOIS data from other client on the server
+        nick: nick of client you want to get the data from
+        """
+        self.server.client_whois(self, nick)
+
+    def command_channel_join(self, chan_name, password=None):
+        """
+        Joins this client to a channel on the server
+        chan_name: Channel name
+        password: Channel password
+        """
+        self.join(chan_name, password)
+
+    def command_channel_part(self, chan_name, message="bye"):
+        """
+        Parts this client from a channel on this server
+        chan_name: Channel name
+        message: part message
+        """
+        self.part(chan_name, message)
+
+    def command_channel_message(self, chan_name, message):
+        """
+        Sends a message to a channel on the server
+        chan_name: Channel name
+        message: message you want to send to the channel
+        """
+        self.message_channel(chan_name, message)
+
+    def command_channel_kick(self, chan_name, nick, message="GTFO"):
+        """
+        Kick a client from a channel
+        chan_name: Channel name
+        nick: nick of client you want to kick from channel
+        message: reason you're kicking this client
+        """
+        if chan_name in self.channels:
+            self.channels[chan_name].kick_user(self, nick, message)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You are not in %s" % chan_name
+            }))
+
+    def command_channel_ban(self, chan_name, nick):
+        """
+        Bad a client from a channel
+        chan_name: Channel name
+        nick: nick of user you want to bad
+        """
+        if chan_name in self.channels:
+            self.channels[chan_name].ban_user(self, nick)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You are not in %s" % chan_name
+            }))
+
+    def command_channel_unban(self, chan_name, ip):
+        """
+        Unban an IP from a channel
+        chan_name: Channel name
+        ip: ip you want to unban
+        """
+        if chan_name in self.channels:
+            self.channels[chan_name].unban_ip(self, ip)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You are not in %s" % chan_name
+            }))
+
+    def command_channel_register(self, chan_name):
+        """
+        Register a channel on the serevr
+        chan_name: name of channel you want to register
+        """
+        if chan_name in self.channels:
+            self.channels[chan_name].register(self)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You're not in %s" % chan_name
+            }))
+
+    def command_channel_badword(self, chan_name, switch, badword):
+        """
+        Adds a word to the channel badword list
+        chan_name: Channel name
+        switch: add or remove bad word
+        badword: word to add to the badword list
+        """
+        if chan_name in self.channels:
+            if switch.lower() == "add":
+                self.channels[chan_name].add_badword(self, badword)
+            elif switch.lower() == "remove":
+                self.channels[chan_name].remove_badword(badword)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You're not in %s" % chan_name
+            }))
+
+    def command_channel_clientflag(self, chan_name, switch, nick, flag):
+        """
+        Add a flag to a client on a channel
+        chan_name: Channel name
+        switch: add or remove bad word
+        flag: flag you want to add/remove
+        """
+        if chan_name in self.channels:
+            if switch.lower() == "add":
+                self.channels[chan_name].add_client_flag(
+                    self, nick, flag)
+            elif switch.lower() == "remove":
+                self.channels[chan_name].remove_client_flag(
+                    self, nick, flag)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You're not in %s" % chan_name
+            }))
+
+    def command_oper(self, password):
+        """
+        Turns this client into an oper
+        password: password
+        """
+        self.server.oper(self, hashlib.md5(password).hexdigest())
+
+    def command_oper_kill(self, nick):
+        """
+        Disconnects a client from the server
+        nick: nick of client you want to disconnect
+        """
+        self.kill(nick)
+
+    def command_oper_sanick(self, nick, new_nick):
+        """
+        Changes a clients nick to a new nick by force
+        nick: clients current nick
+        new_nick: clients new nick
+        """
+        self.sanick(nick, new_nick)
+
+    def command_oper_sajoin(self, nick, chan_name):
+        """
+        Forces a client to join a channel
+        nick: client to force into channel
+        chan_name: channel to force client into
+        """
+        self.sajoin(nick, chan_name)
+
+    def command_oper_sapart(self, nick, chan_name):
+        """
+        Forces a client to leave a channel
+        nick: client to force to leave channel
+        chan_name: channel to force client to leave
+        """
+        self.sapart(nick, chan_name)
+
+    def command_oper_server_ban(self, ip):
+        """
+        Bans a client from the server
+        ip: ip to ban
+        """
+        self.ban_ip(ip)
+
+    def command_oper_global_message(self, message):
+        """
+        Sends a message to all clients connected to the server
+        """
+        if self.is_oper():
+            self.server.global_message(message)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `announcement` command"
+            }))
+
+# End Commands
 
     def readline(self):
         '''
@@ -294,8 +655,8 @@ class Client(threading.Thread):
         """
         del self.channels[channel.name]
         self.writeline(json.dumps({
-            "type": "YOUNICK",
-            "channel": channel,
+            "type": "YOUKICK",
+            "channel": channel.name,
             "message": reason
         }))
 
@@ -305,7 +666,7 @@ class Client(threading.Thread):
         """
         self.writeline(json.dumps({
             "type": "YOUBAN",
-            "channel": channel
+            "channel": channel.name
         }))
 
     def on_sanick(self, new_nick):
@@ -520,32 +881,6 @@ class Client(threading.Thread):
                 "type": "ERROR",
                 "code": errorcodes.get("not an oper"),
                 "message": "You need to be an oper to use the `ban` command"
-            }))
-
-    def server_announcemet(self, message):
-        """
-        Send a message to all clients connected to the server
-        """
-        if self.is_oper():
-            self.server.server_announcement(message)
-        else:
-            self.writeline(json.dumps({
-                "type": "ERROR",
-                "code": errorcodes.get("not an oper"),
-                "message": "You need to be an oper to use the `announcement` command"
-            }))
-
-    def register_channel(self, chan_name):
-        """
-        Register a channel on the server
-        """
-        if chan_name in self.channels:
-            self.channels[chan_name].register(self)
-        else:
-            self.writeline(json.dumps({
-                "type": "ERROR",
-                "code": errorcodes.get("invalid channel/nick"),
-                "message": "You're not in %s" % chan_name
             }))
 
     def message_nick(self, nick, message):

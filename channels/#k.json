@@ -4,5 +4,6 @@
     "name": "#k",
     "ops": [],
     "owner": "",
-    "topic": ""
+    "topic": "",
+    "badwords": []
 }

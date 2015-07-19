@@ -5,7 +5,8 @@ codes = {
     "invalid account name": "004",
     "nick in use": "005",
     "nick excecced limt": "006",
-    "not an oper": "007"
+    "not an oper": "007",
+    "not in channel": "008",
 }
 
 def get(name):

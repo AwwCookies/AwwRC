@@ -12,8 +12,10 @@ class Channel:
         O = server operators only
         F = Redirects users to another channel
         p = prevents the channel from showing in the public list
+        G = Enabled badword list
     """
-    def __init__(self, name, flags={}, topic="", banlist=[], ops=[], owner=""):
+    def __init__(self, server, name, flags={}, topic="", banlist=[], ops=[], owner="", badwords=[]):
+        self.server = server
         self.name = name
         self.flags = flags
         self.clients = []
@@ -23,6 +25,7 @@ class Channel:
         self.banlist = banlist
         self.ops = ops
         self.owner = owner
+        self.badwords = badwords
 
     def add_client(self, client):
         self.clients.append(client)
@@ -235,6 +238,26 @@ class Channel:
                 "channel": self.name,
                 "message": "You are banned from %s" % self.name
             }))
+        elif self.flags.get('G'): # if badwords enabled
+            badword = False
+            for bw in self.badwords:
+                print bw
+                if bw in message:
+                    badword = True
+            if badword:
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "You said a bad word. '%s'" % bw
+                }))
+            else:
+                self.writeline(json.dumps({
+                    "type": "CHANMSG",
+                    "channel": self.name,
+                    "nick": client.nick,
+                    "ip": client.ip,
+                    "message": message
+                }))
         else:
             if self.flags.get("n"): # if flag 'n' is set
                 if client in self.clients:
@@ -374,6 +397,55 @@ class Channel:
                 "message": "not an operator"
             }))
 
+    def add_badword(self, client, badword):
+        """
+        Adds a bad word to the badword list
+        """
+        if self.is_op(client):
+            if len(self.badwords) < self.server.CONFIG["CHAN_BADWORD_LIMIT"]:
+                if not badword in self.badwords:
+                    self.badwords.append(badword)
+                    client.writeline(json.dumps({
+                        "type": "SERVERMSG",
+                        "message": "You added a badword to %s" % self.name
+                    }))
+                else:
+                    client.writeline(json.dumps({
+                        "type": "CHANERROR",
+                        "channel": self.name,
+                        "message": "%s is already in badword list" % ()
+                    }))
+            else:
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "badword list full"
+                }))
+        else:
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
+
+    def remove_badword(self, client, badword):
+        """
+        Removes a bad word from the badword list
+        """
+        if self.is_op(client):
+            if badword in self.badwords:
+                self.badwords.remove(badword)
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "%s removed from %s's badword list" % (badword, self.name)
+                }))
+        else:
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
+
     def set_topic(self, client, new_topic):
         """
         Sets the channel topic
@@ -427,7 +499,8 @@ class Channel:
             "flags": self.flags,
             "banlist": self.banlist,
             "ops": self.ops,
-            "owner": self.owner
+            "owner": self.owner,
+            "badwords": self.badwords
         }
         with open("channels/%s.json" % self.name, 'w') as f:
             f.write(json.dumps(cvars, sort_keys=True, indent=4, separators=(',', ': ')))

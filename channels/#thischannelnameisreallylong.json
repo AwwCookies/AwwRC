@@ -4,5 +4,6 @@
     "name": "#thischannelnameisreallylong",
     "ops": [],
     "owner": "",
-    "topic": ""
+    "topic": "",
+    "badwords": []
 }

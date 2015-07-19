@@ -1,8 +1,11 @@
 {
     "banlist": [],
-    "flags": {},
+    "flags": {
+        "G": true
+    },
     "name": "#chat",
     "ops": [],
     "owner": "",
-    "topic": ""
+    "topic": "",
+    "badwords": []
 }

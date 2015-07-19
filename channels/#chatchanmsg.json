@@ -4,5 +4,6 @@
     "name": "#chatchanmsg",
     "ops": [],
     "owner": "",
-    "topic": ""
+    "topic": "",
+    "badwords": []
 }
