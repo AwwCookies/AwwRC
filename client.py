@@ -27,13 +27,12 @@ class Client(threading.Thread):
         self.nick = uuid.uuid4()
         self.channels = {}
         self.account = None
-        self.flags = []
+        self.flags = ["B"]
 
     def set_nick(self, client, nick):
         """
         Sets the clients nick
         """
-        # TODO: add nick restrictions
         if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
             for c in nick: # make sure each char in in the set
                 if not c in self.server.CONFIG["NICK_CHAR_SET"]:

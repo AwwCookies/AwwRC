@@ -5,7 +5,8 @@
         "k": "cookies",
         "l": false,
         "n": true,
-        "F": false
+        "F": false,
+        "P": 10
     },
     "name": "#help",
     "ops": ["aww:0c5c0fd0-d623-412b-9070-a9a2f2a212eb"],

@@ -47,7 +47,7 @@ class Server:
         anything missing
         """
         config = json.load(open("./config.json", 'r'))
-        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}"
+        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
         return {
             "PORT": config["PORT"] if config.get("PORT") else 5050,
             "TIMEOUT": config["TIMEOUT"] if config.get("TIMEOUT") else 0.5,
@@ -60,6 +60,7 @@ class Server:
             "DEFUALT_OPER_FLAGS": config["DEFUALT_OPER_FLAGS"] if config.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
             "BANLIST": config["BANLIST"] if config.get("BANLIST") else 'banlist.txt',
             "I:LINES": config["I:LINES"] if config.get("I:LINES") else 'ilines.txt',
+            "OPER_VHOST": config["OPER_VHOST"] if config.get("OPER_VHOST") else "server/admin",
             "NICK_CHAR_SET": config["NICK_CHAR_SET"] if config.get("NICK_CHAR_SET") else charset,
             "CONNECTION_LIMIT": int(config["CONNECTION_LIMIT"]) if config.get("CONNECTION_LIMIT") else 5,
             "CHAN_TOPIC_LIMIT": int(config["CHAN_TOPIC_LIMIT"]) if config.get("CHAN_TOPIC_LIMIT") else 300,
@@ -86,6 +87,11 @@ class Server:
                 print("Failed to load channel json %s" % c)
         return channels
 
+    def get_ilines(self):
+        with open(self.CONFIG["I:LINES"], 'r') as f:
+            for line in f.readlines():
+                yield line.split()[0]
+
     def register_client(self, client):
         # if the server is full tell the client and disconnect them
         if len(self.clients) >= self.CONFIG["SERVER_MAX_USERS"]:
@@ -96,7 +102,7 @@ class Server:
             return False
         # if too many connections from this IP disconnect client
         # if the client doesn't have an I:Line
-        if not client.ip in [ip.strip() for ip in open(self.CONFIG["I:LINES"], 'r').readlines()]:
+        if not client.ip in self.get_ilines():
             # See if IP breaks connection limit
             if (self.ips.count(client.ip) + 1) > self.CONFIG["CONNECTION_LIMIT"]:
                 client.writeline(json.dumps({
@@ -112,7 +118,7 @@ class Server:
                 json.dumps({"type": "YOUSERVERBAN", "ip": client.ip}))
             client.quit()
             return False
-        else:
+        else: # let the clinet on the server
             self.users[client.nick] = client
             self.ips.append(client.ip)
             self.writeline("%s is registered as %s" % (client.ip, client.nick))
@@ -188,6 +194,8 @@ class Server:
         oper_blocks = [op.strip()
                        for op in open("./opers.txt", "r").readlines()]
         if client.ip + '|' + hashedpw in oper_blocks:
+            if self.CONFIG["OPER_VHOST"]:
+                client.ip = self.CONFIG["OPER_VHOST"]
             client.add_flag('O')
             client.add_flags(self.CONFIG["DEFUALT_OPER_FLAGS"])
             client.writeline(json.dumps({

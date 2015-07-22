@@ -7,12 +7,14 @@ class Channel:
     """
     flags:
         n = No outside message
-        k = key e.g password
-        l = limit the amount of users
+        k = Key e.g password
+        l = Limit the amount of users
         O = server operators only
         F = Redirects users to another channel
-        p = prevents the channel from showing in the public list
+        p = Prevents the channel from showing in the public list
         G = Enabled badword list
+        P = Playback: sends the last x lines to a new client
+        B = No bots: pervents clients with the `B` flag from joining
     """
     def __init__(self, server, name, flags={}, topic="", banlist=[], ops=[], owner="", badwords=[]):
         self.server = server
@@ -26,6 +28,7 @@ class Channel:
         self.ops = ops
         self.owner = owner
         self.badwords = badwords
+        self.messages = []
 
     def add_client(self, client):
         self.clients.append(client)
@@ -46,6 +49,15 @@ class Channel:
             "channel": self.name,
             "userlist": self.users.keys()
         }))
+        if self.flags.get("P"): # if playback is enabled
+            self.playback(client, amount=self.flags.get("P"))
+
+    def playback(self, client, amount=10):
+        """
+        Send the last x lines to clinet
+        """
+        for msg in self.messages[-abs(amount):]:
+            client.writeline(msg)
 
     def on_join(self, client, key=None):
         """
@@ -60,6 +72,12 @@ class Channel:
         if self.flags.get("F"): # If the forward flag is set
             client.join(self.flags["F"])
             return False
+
+        if self.flags.get("B"): # no bots
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "%s doesn't allow bots" % self.name
+            }))
 
         print("%s %s joined %s" % (client.nick, client.ip, self.name))
         if client.ip not in self.banlist:
@@ -258,6 +276,14 @@ class Channel:
                     "ip": client.ip,
                     "message": message
                 }))
+                if self.flags.get("P"):
+                    self.messages.append(json.dumps({
+                        "type": "CHANMSG",
+                        "channel": self.name,
+                        "nick": client.nick,
+                        "ip": client.ip,
+                        "message": message
+                    }))
         else:
             if self.flags.get("n"): # if flag 'n' is set
                 if client in self.clients:
@@ -268,6 +294,14 @@ class Channel:
                         "ip": client.ip,
                         "message": message
                     }))
+                    if self.flags.get("P"):
+                        self.messages.append(json.dumps({
+                            "type": "CHANMSG",
+                            "channel": self.name,
+                            "nick": client.nick,
+                            "ip": client.ip,
+                            "message": message
+                        }))
                 else:
                     client.writeline(json.dumps({
                         "type": "CHANERROR",
@@ -282,6 +316,14 @@ class Channel:
                     "ip": client.ip,
                     "message": message
                 }))
+                if self.flags.get("P"):
+                    self.messages.append(json.dumps({
+                        "type": "CHANMSG",
+                        "channel": self.name,
+                        "nick": client.nick,
+                        "ip": client.ip,
+                        "message": message
+                    }))
 
     def writeline(self, message):
         """
@@ -299,7 +341,7 @@ class Channel:
         Checks to see if the client is an operator
         Returns True if: client's uuid is in the channel file - Must be logged in
         Returns True if: client has the o flag
-        Returns True if: client is a server admin
+        Returns True if: client is a server admin/oper
         """
         if client.logged_in():
             return client.account["uuid"] in self.ops or "o" in self.user_flags[client.nick] or client.is_oper()

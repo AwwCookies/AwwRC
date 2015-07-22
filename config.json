@@ -15,5 +15,6 @@
     "CHAN_BADWORD_LIMIT": 50,
     "CHAN_TOPIC_LIMIT": 300,
     "MAX_CHAN_NAME_LENGTH": 20,
-    "NICK_CHAR_SET": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|"
+    "NICK_CHAR_SET": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|-",
+    "OPER_VHOST": "server/admin"
 }
