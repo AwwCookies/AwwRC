@@ -13,5 +13,7 @@
     "I:LINES": "ilines.txt",
     "CHAN_BAN_LIMIT": 50,
     "CHAN_BADWORD_LIMIT": 50,
-    "CHAN_TOPIC_LIMIT": 300
+    "CHAN_TOPIC_LIMIT": 300,
+    "MAX_CHAN_NAME_LENGTH": 20,
+    "NICK_CHAR_SET": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|"
 }

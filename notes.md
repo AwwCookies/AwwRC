@@ -1,2 +1,14 @@
 #NOTES
-ERROR 001 Nick already in use
+Channel Message
+
+##TYPE
+CHANMSG:
+```
+{
+    "type": "CHANMSG",
+    "channel": self.name,
+    "nick": client.nick,
+    "ip": client.ip,
+    "message": message
+}
+```

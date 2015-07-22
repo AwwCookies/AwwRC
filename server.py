@@ -42,7 +42,12 @@ class Server:
             self.CONFIG = self.load_config()
 
     def load_config(p="./config.json"):
+        """
+        Parse the config file and set default values for
+        anything missing
+        """
         config = json.load(open("./config.json", 'r'))
+        charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}"
         return {
             "PORT": config["PORT"] if config.get("PORT") else 5050,
             "TIMEOUT": config["TIMEOUT"] if config.get("TIMEOUT") else 0.5,
@@ -55,10 +60,12 @@ class Server:
             "DEFUALT_OPER_FLAGS": config["DEFUALT_OPER_FLAGS"] if config.get("DEFUALT_OPER_FLAGS") else ['k', 'w'],
             "BANLIST": config["BANLIST"] if config.get("BANLIST") else 'banlist.txt',
             "I:LINES": config["I:LINES"] if config.get("I:LINES") else 'ilines.txt',
+            "NICK_CHAR_SET": config["NICK_CHAR_SET"] if config.get("NICK_CHAR_SET") else charset,
             "CONNECTION_LIMIT": int(config["CONNECTION_LIMIT"]) if config.get("CONNECTION_LIMIT") else 5,
             "CHAN_TOPIC_LIMIT": int(config["CHAN_TOPIC_LIMIT"]) if config.get("CHAN_TOPIC_LIMIT") else 300,
             "CHAN_BAN_LIMIT": int(config["CHAN_BAN_LIMIT"]) if config.get("CHAN_BAN_LIMIT") else 50,
             "CHAN_BADWORD_LIMIT": int(config["CHAN_BADWORD_LIMIT"]) if config.get("CHAN_BADWORD_LIMIT") else 50,
+            "MAX_CHAN_NAME_LENGTH": int(config["MAX_CHAN_NAME_LENGTH"]) if config.get("MAX_CHAN_NAME_LENGTH") else 20,
         }
 
     def load_channels(self):
@@ -113,7 +120,7 @@ class Server:
                 for line in open("motd.txt", 'r').readlines():
                     client.writeline(json.dumps({
                         "type": "SERVERMOTD",
-                        "message": line.strip()
+                        "message": line.strip("\n")
                     }))
             client.writeline(json.dumps({
                 "type": "SERVERCONFIG",
@@ -230,15 +237,24 @@ class Server:
             }))
 
     def create_channel(self, client, name, flags={}, topic=""):
-        if name not in self.channels.keys():
-            self.channels[name] = Channel(self, name, flags, topic)
-            self.channels[name].save()
-            self.writeline("%s created a new channel %s" % (client.nick, name))
+        name = name[0:self.CONFIG["MAX_CHAN_NAME_LENGTH"]]
+        if name.strip().startswith("#"):
+            if name not in self.channels.keys():
+                self.channels[name] = Channel(self, name, flags, topic)
+                self.channels[name].save()
+                self.writeline("%s created a new channel %s" % (client.nick, name))
+                return True
+            else:
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "Channel %s is already created" % name
+                }))
         else:
             client.writeline(json.dumps({
                 "type": "SERVERMSG",
-                "message": "Channel %s is already created" % name
+                "message": "invalid channel name "
             }))
+
 
     def ban_ip(self, ip):
         """

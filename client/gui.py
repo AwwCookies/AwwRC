@@ -3,6 +3,7 @@ import gtk
 import sys
 import socket
 import gobject
+import json
 
 
 class GUIClient:
@@ -20,6 +21,10 @@ class GUIClient:
         self.connectPortBox.set_text("")
         self.connectButton = gtk.Button("Connect")
         self.connectButton.set_sensitive(False)
+        self.channel_buttons = gtk.HBox(False, 0)
+        self.channel_status_button = gtk.Button("status")
+        self.channel_status_button.connect('clicked', self.button_switch_buffer)
+        self.channel_buttons.pack_start(self.channel_status_button)
 
         self.connectIPBox.show()
         self.connectPortBox.show()
@@ -76,6 +81,7 @@ class GUIClient:
         self.sendButton.connect("clicked", self.send)
         self.window.connect("delete_event", self.delete_event)
         self.window.connect("destroy", self.destroy)
+        self.windowBox.pack_start(self.channel_buttons, False, False, 0)
         self.windowBox.pack_start(self.messages, True, True, 0)
         self.windowBox.pack_end(self.editBox, False, False, 0)
         self.window.add(self.windowBox)
@@ -144,7 +150,12 @@ class GUIClient:
             if args[0] == "/win":
                 self.switch_buffer(args[1])
             elif args[0] == "/raw":
-                self.socket.sendall(' '.join(message.split()[1:]) + "\n")
+                self.socket.send(' '.join(message.split()[1:]) + "\n")
+            elif args[0] == "/join":
+                if len(args) > 2:
+                    self.socket.send("chanjoin %s %s" % (args[1], args[2]))
+                else:
+                    self.socket.send("chanjoin %s" % args[1])
         else:
             args = message.split()
             self.socket.send("chanmsg %s %s" %
@@ -161,12 +172,20 @@ class GUIClient:
 
         message = self.getNextMessage()
         while message:
-            args = message.split()
-            if args[0] == "CHANMSG":
-                self.add_message_buffer(args[1], ' '.join(args[2:]))
-            else:
-                self.add_message(message)
-            message = self.getNextMessage()
+            if not message.strip() == "":
+                for msg in message.split('\n'):
+                    msg = json.loads(msg)
+                    if msg["type"] == "YOUJOIN":
+                        self.button = gtk.Button(msg["channel"])
+                        self.button.connect("clicked", self.button_switch_buffer)
+                        self.channel_buttons.pack_start(self.button)
+                        self.channel_buttons.show_all()
+                    if msg["type"] == "CHANMSG":
+                        self.add_message_buffer(msg["channel"],
+                        "<%s> | %s" % (msg["nick"], msg["message"]))
+                    else:
+                        self.add_message(message)
+                    message = self.getNextMessage()
         return True
 
     def getNextMessage(self):
@@ -180,6 +199,9 @@ class GUIClient:
     def create_buffer(self, buff_name):
         if buff_name not in self.buffers:
             self.buffers[buff_name] = gtk.TextBuffer()
+
+    def button_switch_buffer(self, wig):
+        self.switch_buffer(wig.get_label())
 
     def switch_buffer(self, buff_name):
         if buff_name in self.buffers:

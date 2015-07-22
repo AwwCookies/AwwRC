@@ -35,6 +35,16 @@ class Client(threading.Thread):
         """
         # TODO: add nick restrictions
         if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
+            for c in nick: # make sure each char in in the set
+                if not c in self.server.CONFIG["NICK_CHAR_SET"]:
+                    client.writeline(json.dumps({
+                        "type": "ERROR",
+                        "code": errorcodes.get("invalid channel/nick"),
+                        "message": "Your nick my only contain these chars: %s" % (
+                            self.server.CONFIG["NICK_CHAR_SET"]
+                        )
+                    }))
+                    self.set_nick(client, client.readline())
             if nick not in self.server.users.keys():
                 old_nick = str(client.nick)
                 client.nick = str(nick)
@@ -65,7 +75,6 @@ class Client(threading.Thread):
     def logged_in(self):
         return self.account
 
-
     def run(self):
         '''
         Thread's main loop. Once this function returns, the thread is finished
@@ -85,7 +94,7 @@ class Client(threading.Thread):
                 args = cmd.split(" ")
                 # Command `quit`
                 if args[0].lower() == "quit":
-                    if len(args) > 2:
+                    if len(args) > 1:
                         self.command_quit(message=' '.join(args[1:]))
                     else:
                         self.writeline(json.dumps({
@@ -225,6 +234,15 @@ class Client(threading.Thread):
                         self.writeline(json.dumps({
                             "type": "SERVERMSG",
                             "message": "help: chanflag <channel> <add/remove> <nick> <flag>"
+                        }))
+                # Command `chanusers`
+                elif args[0].lower() == "chanusers":
+                    if len(args) > 1:
+                        self.command_channel_members(chan_name=arg[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanusers <channel>"
                         }))
                 # Command `oper`
                 elif args[0].lower() == "oper":
@@ -379,6 +397,25 @@ class Client(threading.Thread):
         message: message you want to send to the channel
         """
         self.message_channel(chan_name, message)
+
+
+    def command_channel_members(self, chan_name):
+        """
+        Gives a list of all the clients in a channel
+        chan_name: Channel name
+        """
+        if chan_name in self.channels:
+            self.writeline(json.dumps({
+                "type": "CHANUSERS",
+                "channel": chan_name,
+                "members": self.channels[chan_name].users.keys()
+            }))
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not in channel"),
+                "message": "You are not in %s" % chan_name
+            }))
 
     def command_channel_kick(self, chan_name, nick, message="GTFO"):
         """
@@ -570,6 +607,10 @@ class Client(threading.Thread):
             if channel not in self.channels:
                 if self.server.channels[channel].on_join(self, key):
                     self.channels[channel] = self.server.channels[channel]
+                    self.writeline(json.dumps({
+                        "type": "YOUJOIN",
+                        "channel": channel
+                    }))
             else:
                 self.writeline(json.dumps({
                     "type": "SERVERMSG",
@@ -577,9 +618,13 @@ class Client(threading.Thread):
                 }))
         else:
             if self.server.CONFIG.get("CHANNEL_CREATION"):
-                self.server.create_channel(self, channel)
-                # self.channels[channel] = self.server.channels[channel]
-                self.join(channel, key)
+                if self.server.create_channel(self, channel):
+                    self.channels[channel] = self.server.channels[channel]
+                    self.server.channels[channel].on_join(self, key)
+                    self.writeline(json.dumps({
+                        "type": "YOUJOIN",
+                        "channel": channel
+                    }))
             else:
                 self.writeline(json.dumps({
                     "type": "SERVERMSG",
@@ -897,7 +942,7 @@ class Client(threading.Thread):
                 "message": message
             }))
         else:
-            client.writeline(json.dumps({
+            self.writeline(json.dumps({
                 "type": "ERROR",
                 "code": errorcodes.get("invalid channel/nick"),
                 "message": "%s isn't on the server" % self.nick
@@ -910,7 +955,7 @@ class Client(threading.Thread):
         if channel in self.server.channels.keys():
             self.server.channels[channel].on_message(self, message)
         else:
-            client.writeline(json.dumps({
+            self.writeline(json.dumps({
                 "type": "ERROR",
                 "code": errorcodes.get("invalid channel/nick"),
                 "message": "No channel named %s" % channel

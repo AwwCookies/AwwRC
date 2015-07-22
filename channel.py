@@ -21,7 +21,7 @@ class Channel:
         self.clients = []
         self.users = {}
         self.user_flags = defaultdict(list)
-        self.topic = topic
+        self.topic = topic[0:self.server.CONFIG["CHAN_TOPIC_LIMIT"]]
         self.banlist = banlist
         self.ops = ops
         self.owner = owner
