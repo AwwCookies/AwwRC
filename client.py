@@ -14,6 +14,11 @@ class Client(threading.Thread):
 
     '''
     Class that implements the client threads in this server
+    Client Modes:
+    B = Bot
+    O = Oper
+    k = can kill users from the server
+    w = receives oper messages
     '''
 
     def __init__(self, client_sock, server):
@@ -246,7 +251,7 @@ class Client(threading.Thread):
                 # Command `oper`
                 elif args[0].lower() == "oper":
                     if len(args) > 1:
-                        self.command_oper(args[1])
+                        self.command_oper(password=args[1])
                     else:
                         self.writeline(json.dumps({
                             "type": "SERVERMSG",
@@ -577,20 +582,20 @@ class Client(threading.Thread):
 # End Commands
 
     def readline(self):
-        '''
-        Helper function, reads up to MAX_RECV_SIZE chars from the socket, and returns
-        them as a string, without any end of line
-        markers '''
+        """
+        Helper function, reads up to MAX_RECV_SIZE chars from the socket,
+        and returns them as a string, without any end of line markers
+        """
         result = self.client.recv(self.server.CONFIG["MAX_RECV_SIZE"])
         if(result != None):
             result = result.strip()
         return result
 
     def writeline(self, text):
-        '''
+        """
         Helper function, writes teh given string to the socket, with an end of
         line marker appended at the end
-        '''
+        """
         self.client.send(text.strip() + '\n')
 
     def join(self, channel, key=None):
