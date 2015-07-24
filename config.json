@@ -4,7 +4,7 @@
     "TIMEOUT": 0.5,
     "MAX_NICK_LENGTH": 12,
     "CHANNEL_CREATION": true,
-    "MAX_RECV_SIZE": 1024,
+    "MAX_RECV_SIZE": 2048,
     "SERVER_ADMIN_CHANNEL": "&SA",
     "SERVER_MAX_USERS": 100,
     "DEFUALT_OPER_FLAGS": ["k", "w"],
@@ -15,6 +15,7 @@
     "CHAN_BADWORD_LIMIT": 50,
     "CHAN_TOPIC_LIMIT": 300,
     "MAX_CHAN_NAME_LENGTH": 20,
+    "MAX_CHAN_NOTE_LENGTH": 1000,
     "NICK_CHAR_SET": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|-",
     "OPER_VHOST": "server/admin"
 }

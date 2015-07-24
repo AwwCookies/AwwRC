@@ -315,6 +315,17 @@ class Client(threading.Thread):
                             "type": "SERVERMSG",
                             "message": "help: globalmsg <message>"
                         }))
+                # Command `note`
+                elif args[0].lower() == "usernote":
+                    if len(args) > 3:
+                        self.command_usernote(
+                            switch=args[1], nick=args[2],
+                            message=' '.join(args[3:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: usernote <send/read> <send/read: nick> <send: message>"
+                        }))
                 else:
                     self.writeline(json.dumps({
                         "type": "INVALIDCOMMAND"
@@ -337,6 +348,33 @@ class Client(threading.Thread):
             "type": "YOUQUIT",
             "message": message
         }))
+
+    def command_usernote(self, nick, switch, message):
+        """
+        Lets a client leave a note for another client
+        """
+        if switch == "send":
+            account = self.server.get_account(nick)
+            if account:
+                account.get("notes").append({
+                    "from": self.nick,
+                    "message": message
+                })
+                # Save changes
+                with open("accounts/%s.json" % nick, 'w') as f:
+                    f.write(json.dumps(account,
+                    sort_keys=True, indent=4, separators=(',', ': ')))
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You sent a note to %s" % nick
+                }))
+            else:
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "%s doesn't have an account." % nick
+                }))
+        elif switch == "read":
+            pass
 
     def command_channel_list(self):
         """
@@ -579,6 +617,17 @@ class Client(threading.Thread):
                 "message": "You need to be an oper to use the `announcement` command"
             }))
 
+    def command_oper_rehash(self):
+        if self.is_oper():
+            self.server.rehash()
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `announcement` command"
+            }))
+
+
 # End Commands
 
     def readline(self):
@@ -591,12 +640,12 @@ class Client(threading.Thread):
             result = result.strip()
         return result
 
-    def writeline(self, text):
+    def writeline(self, message):
         """
-        Helper function, writes teh given string to the socket, with an end of
+        Helper function, writes the given string to the socket, with an end of
         line marker appended at the end
         """
-        self.client.send(text.strip() + '\n')
+        self.client.send(message.strip() + '\n')
 
     def join(self, channel, key=None):
         """
@@ -791,6 +840,23 @@ class Client(threading.Thread):
             "type": "YOUSAPART",
             "channel": channel
         }))
+
+    def on_login(self):
+        """
+        Runs when this client logins
+        """
+        # Send unread notes to client
+        for note in self.account.get("notes"):
+            self.writeline(json.dumps({
+                "type": "NOTE",
+                "from": note.get("from"),
+                "message": note.get("message")
+            }))
+        if self.account:
+            self.account["notes"] = []
+            with open("accounts/%s.json" % self.nick, 'w') as f:
+                f.write(json.dumps(self.account,
+                sort_keys=True, indent=4, separators=(',', ': ')))
 
     ##### Oper Commands #####
     def is_oper(self):

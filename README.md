@@ -1,5 +1,5 @@
 # AwwRC
-Becuase IRC didn't have enough Aww
+Because IRC didn't have enough Aww
 
 ## How to use!
 Start the server: `python2 main.py`
@@ -25,3 +25,4 @@ Connect with a client: `telnet 127.0.0.1 5050`
 - k: Allows the client to use the `kill` command (not implemeted)
 - S: Allows the client to use SA commands e.g `sajoin` `sanick` (not implemeted)
 - i: Prevents the user from showing up on server user list (not implemented)
+- a: Marks the client as away (not implemented)

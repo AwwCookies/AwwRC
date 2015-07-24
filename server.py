@@ -33,13 +33,12 @@ class Server:
         self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(self,
             self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True, "p": True}, "Server Admin Channel")
 
-    def rehash(self, client):
+    def rehash(self):
         """
         Reloads the config and channels
         """
-        if client.is_oper():
-            self.channels = self.load_channels()
-            self.CONFIG = self.load_config()
+        self.channels = self.load_channels()
+        self.CONFIG = self.load_config()
 
     def load_config(p="./config.json"):
         """
@@ -79,13 +78,22 @@ class Server:
             try:
                 channel = json.load(open(c, 'r'))
                 channels[channel["name"]] = Channel(self,
-                    channel["name"], channel["flags"], channel["topic"],
-                    channel["banlist"], channel["ops"], channel["owner"],
-                    channel["badwords"])
+                    channel.get("name", "Unknown"), channel.get("flags", {}),
+                    channel.get("topic", ""), channel.get("banlist", []),
+                    channel.get("ops", []), channel.get("owner", ""),
+                    channel.get("badwords", []), channel.get("public_notes", ""),
+                    channel.get("op_notes", ""))
                 print("Loaded channel %s from %s" % (channel["name"], c))
             except:
                 print("Failed to load channel json %s" % c)
         return channels
+
+    def get_account(self, nick):
+        """
+        Returns the account of `nick`
+        """
+        if os.path.exists("accounts/%s.json" % nick):
+            return json.load(open("accounts/%s.json" % nick))
 
     def get_ilines(self):
         with open(self.CONFIG["I:LINES"], 'r') as f:
@@ -130,7 +138,7 @@ class Server:
                     }))
             client.writeline(json.dumps({
                 "type": "SERVERCONFIG",
-                "config": json.dumps(self.CONFIG)
+                "config": self.CONFIG
             }))
             client.writeline(json.dumps({
                 "type": "SERVERUSERS",
@@ -151,6 +159,7 @@ class Server:
                 f.write(json.dumps({
                     "email": email,
                     "password": hashedpw,
+                    "notes": [],
                     "uuid": client.nick + ':' + str(uuid.uuid4()),
                     "time_registered": int(time.time())
                 }, sort_keys=True, indent=4, separators=(',', ': ')))
@@ -171,6 +180,7 @@ class Server:
                     "message": "You're now logged in!"
                 }))
                 self.writeline("%s logged in" % client.nick)
+                client.on_login()
             else:
                 client.writeline("ERROR Invalid password for %s" % client.nick)
                 client.writeline(json.dumps({

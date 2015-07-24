@@ -1,5 +1,4 @@
-#TODO
-
+# TODO
 - [ ] Improve on the GUI client
 - [ ] Add the ability to mute/unmute a user on a channel
 - [ ] Allow server admins to change the MOTD with a command
@@ -26,3 +25,6 @@
 - [x] convert replies in client.py to JSON
 - [x] rename server announcements to global messages
 - [x] fix sending of MOTD to client
+- [x] implement channel flag `R`
+- [ ] implement user flag `i`
+- [x] Let users set notes for users when they're away `usernote send`

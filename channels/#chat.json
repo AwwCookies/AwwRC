@@ -1,11 +1,13 @@
 {
+    "badwords": [],
     "banlist": [],
     "flags": {
-        "G": true
+        "B": true
     },
     "name": "#chat",
+    "op_notes": [],
     "ops": [],
     "owner": "",
-    "topic": "",
-    "badwords": []
+    "public_notes": [],
+    "topic": ""
 }

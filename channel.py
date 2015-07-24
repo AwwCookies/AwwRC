@@ -15,8 +15,10 @@ class Channel:
         G = Enabled badword list
         P = Playback: sends the last x lines to a new client
         B = No bots: pervents clients with the `B` flag from joining
+        R = Only registered clients can join
     """
-    def __init__(self, server, name, flags={}, topic="", banlist=[], ops=[], owner="", badwords=[]):
+    def __init__(self, server, name, flags={}, topic="", banlist=[],
+        ops=[], owner="", badwords=[], public_notes=[], op_notes=[]):
         self.server = server
         self.name = name
         self.flags = flags
@@ -29,6 +31,8 @@ class Channel:
         self.owner = owner
         self.badwords = badwords
         self.messages = []
+        self.public_notes = public_notes
+        self.op_notes = op_notes
 
     def add_client(self, client):
         self.clients.append(client)
@@ -68,7 +72,6 @@ class Channel:
         to join the channel and they will recv a banned
         message from the channel
         """
-
         if self.flags.get("F"): # If the forward flag is set
             client.join(self.flags["F"])
             return False
@@ -78,8 +81,15 @@ class Channel:
                 "type": "SERVERMSG",
                 "message": "%s doesn't allow bots" % self.name
             }))
+            return False
 
-        print("%s %s joined %s" % (client.nick, client.ip, self.name))
+        if self.flags.get("R"): # Registered users only
+            if not client.logged_in(): # not logged in
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You must be registered and logged in to join %s" % self.name
+                }))
+                return False
         if client.ip not in self.banlist:
             if self.flags.get('O'):
                 if client.is_oper():
@@ -240,6 +250,22 @@ class Channel:
                 "message": "not an operator"
             }))
 
+    def add_public_note(self, client, message):
+        """
+        Sets a public note for all users in a channel to read
+        """
+        if client.is_op():
+            self.public_notes.append(message)
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You sent a public note on %s" % self.name
+            }))
+        else:
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
 
     def on_message(self, client, message):
         """
@@ -542,7 +568,9 @@ class Channel:
             "banlist": self.banlist,
             "ops": self.ops,
             "owner": self.owner,
-            "badwords": self.badwords
+            "badwords": self.badwords,
+            "public_notes": self.public_notes,
+            "op_notes": self.op_notes
         }
         with open("channels/%s.json" % self.name, 'w') as f:
             f.write(json.dumps(cvars, sort_keys=True, indent=4, separators=(',', ': ')))

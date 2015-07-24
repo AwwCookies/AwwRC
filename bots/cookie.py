@@ -1,22 +1,20 @@
 import socket
 import json
 
-CONFIG = {
-    "nick": "cookie",
-    "oper_pass": "",
-    "address": "127.0.0.1",
-    "port": 5050
-}
+from faker import Faker
+fake = Faker()
 
-sock = socket.socket()
-sock.connect((CONFIG["address"], CONFIG["port"]))
-sock.send(CONFIG["nick"])
-while buffer:
+for x in xrange(10000):
+    CONFIG = {
+        "nick": fake.first_name(),
+        "oper_pass": "",
+        "address": "127.0.0.1",
+        "port": 5050
+    }
+
+    sock = socket.socket()
+    sock.connect((CONFIG["address"], CONFIG["port"]))
+    sock.send(CONFIG["nick"])
     servmsg = sock.recv(1024)
-    for msg in servmsg.split("\n"):
-        if not msg.strip() == "":
-            data = json.loads(msg)
-            if data["type"] == "USERMSG":
-                sock.send("usermsg %s Hello, World" % data["nick"])
-            else:
-                print data
+    sock.send("register %s %s" % (fake.password(), fake.email())
+    sock.close()

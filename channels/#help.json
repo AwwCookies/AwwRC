@@ -1,16 +1,20 @@
 {
+    "badwords": [],
     "banlist": [],
     "flags": {
+        "F": false,
         "O": false,
+        "P": 10,
         "k": "cookies",
         "l": false,
-        "n": true,
-        "F": false,
-        "P": 10
+        "n": true
     },
     "name": "#help",
-    "ops": ["aww:0c5c0fd0-d623-412b-9070-a9a2f2a212eb"],
+    "op_notes": [],
+    "ops": [
+        "aww:0c5c0fd0-d623-412b-9070-a9a2f2a212eb"
+    ],
     "owner": "aww:0c5c0fd0-d623-412b-9070-a9a2f2a212eb",
-    "topic": "Welcome to #help!",
-    "badwords": []
+    "public_notes": [],
+    "topic": "Welcome to #help!"
 }
