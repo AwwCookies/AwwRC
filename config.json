@@ -16,7 +16,7 @@
     "NICK_CHAR_SET": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|-",
     "OPER_VHOST": "server/admin",
     "PORT": 5050,
-    "RESERVED_NICKS": ["chanserv"],
+    "RESERVED_NICKS": ["chanserv", "nickserv"],
     "SERVER_ADMIN_CHANNEL": "&SA",
     "SERVER_MAX_USERS": 100,
     "TIMEOUT": 0.5

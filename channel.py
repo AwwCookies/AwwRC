@@ -79,7 +79,7 @@ class Channel:
             return False
 
         if self.flags.get("B"): # no bots
-            if client.flags.get("B"):
+            if "B" in client.flags:
                 client.writeline(json.dumps({
                     "type": "SERVERMSG",
                     "message": "%s doesn't allow bots" % self.name
