@@ -23,7 +23,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 - B: Flags the client as a bot
 - w: Allows the client to receive oper messages
 - i: Prevents the user from showing up on server user list (not implemented)
-- a: Marks the client as away (not implemented)
+- a: Marks the client as away
 
 ### Commands
 - quit: `quit <message>` disconnects you from the server
@@ -42,7 +42,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 - chanflag: `chanflag <channel> <add/remove> <flag> <args>` set a channel flag **(chanop only)**
 - chanban: `chanban <channel> <nick>` ban a client from the channel **(chanop only)**
 - chanunban: `chanunban <channel> <ip>` unban an IP from the channel **(chanop only)**
-- chanregister: `chanregister <channel>` registers a channel to you **(chanop only)**
+- chanregister: `chanregister <channel>` registers a channel to you
 - chanbadword: `chanbadword <channel> <add/remove> <word>` prevents clients from sending that *word* to the channel **(chanop only)**
 - chanclientflag: `chanclientflag <channel> <add/remove> <nick> <flag>` sets a flag on client in a channel **(chanop only)**
 - chanusers: `chanusers <channel>` returns a list of all users in that channel
@@ -53,3 +53,115 @@ Connect with a client: `telnet 127.0.0.1 5050`
 - sapart: `sapart <nick> <channel>` forcefully removes a client from a channel **(oper only)**
 - serverban: `serverban <IP>` bans an IP from the server **(oper only)**
 - globalmsg: `globalmsg <message>` sends a message to all clients connected to the server **(oper only)**
+
+###Events Examples
+#####*CHANJOIN*
+```
+{
+    "type": "CHANJOIN",
+    "channel": "#example",
+    "nick": "example",
+    "ip": "127.0.0.1"
+}
+```
+#####*CHANTOPIC*
+```
+{
+    "type": "CHANTOPIC",
+    "channel": "#example",
+    "topic": "this is a topic"
+}
+```
+#####*CHANUSERS*
+```
+{
+    "type": "CHANUSERS",
+    "channel": "#example",
+    "topic": ['aww', 'mike', 'Pual']
+}
+```
+#####*SERVERMSG*
+```
+{
+    "type": "SERVERMSG",
+    "message": "example message"
+}
+```
+#####*CHANERROR*
+```
+{
+    "type": "CHANERROR",
+    "channel": "#example",
+    "message": "desc of error"
+}
+```
+#####*YOUCHANBANNED*
+```
+{
+    "type": "YOUCHANBANNED",
+    "channel": "#example",
+}
+```
+#####*CHANPART*
+```
+{
+    "type": "CHANPART",
+    "channel": "#example",
+    "nick": "nilly",
+    "ip": "127.0.0.1",
+    "message": "bye bye!"
+}
+```
+#####*CHANKICK*
+```
+{
+    "type": "CHANKICK",
+    "channel": "#example",
+    "nick": "nilly",
+    "message": "Bad word"
+}
+```
+#####*CHANBAN*
+```
+{
+    "type": "CHANBAN",
+    "channel": "#example",
+    "nick": "nilly",
+}
+```
+#####*CHANUNBAN*
+```
+{
+    "type": "CHANUNBAN",
+    "channel": "#example",
+    "ip": "127.0.0.1",
+}
+```
+#####*YOUCHANBANNED*
+```
+{
+    "type": "YOUCHANBANNED",
+    "channel": "#example",
+    "message": "Bad word!",
+}
+```
+#####*CHANMSG*
+```
+{
+    "type": "CHANMSG",
+    "channel": "#example",
+    "message": "Hey, Everyone!",
+    "nick": "nilly",
+    "ip": "127.0.0.1"
+}
+```
+#####*CHANFLAG*
+```
+{
+    "type": "CHANFLAG",
+    "channel": "#example",
+    "nick": "nilly",
+    "operator": "Aww",
+    "flag": "+o"
+}
+```

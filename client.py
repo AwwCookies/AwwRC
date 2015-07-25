@@ -376,6 +376,7 @@ class Client(threading.Thread):
             "type": "YOUQUIT",
             "message": message
         }))
+        self.quit()
 
     def command_nick(self, nick):
         """
@@ -820,6 +821,7 @@ class Client(threading.Thread):
         Disconnects the client from the server
         """
         self.client.close()
+        quit()
 
     ##### Handlers #####
     def on_kill(self, message):
