@@ -26,5 +26,9 @@
 - [x] rename server announcements to global messages
 - [x] fix sending of MOTD to client
 - [x] implement channel flag `R`
+- [x] implement channel flag `m`
 - [ ] implement user flag `i`
 - [x] Let users set notes for users when they're away `usernote send`
+- [x] Reserve nicks
+- [x] Op only messages in channels
+- [ ] Let channels restrcit to one join per IP

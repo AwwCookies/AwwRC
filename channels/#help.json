@@ -4,10 +4,12 @@
     "flags": {
         "F": false,
         "O": false,
-        "P": 10,
-        "k": "cookies",
+        "P": false,
+        "R": true,
+        "k": "this is a password",
         "l": false,
-        "n": true
+        "m": true,
+        "n": false
     },
     "name": "#help",
     "op_notes": [],

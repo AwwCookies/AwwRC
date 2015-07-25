@@ -16,6 +16,7 @@ class Channel:
         P = Playback: sends the last x lines to a new client
         B = No bots: pervents clients with the `B` flag from joining
         R = Only registered clients can join
+        m = only users with v or o and talk
     """
     def __init__(self, server, name, flags={}, topic="", banlist=[],
         ops=[], owner="", badwords=[], public_notes=[], op_notes=[]):
@@ -33,6 +34,7 @@ class Channel:
         self.messages = []
         self.public_notes = public_notes
         self.op_notes = op_notes
+        self.support_flags = list("nmklOFpGPBR")
 
     def add_client(self, client):
         self.clients.append(client)
@@ -282,6 +284,15 @@ class Channel:
                 "channel": self.name,
                 "message": "You are banned from %s" % self.name
             }))
+            return
+        elif self.flags.get("m"):
+            if 'v' not in self.user_flags[client.nick] or not self.is_op(client):
+                client.writeline(json.dumps({
+                    "type": "CHANERROR",
+                    "channel": self.name,
+                    "message": "%s is +m. you need +v or +o to talk in this channel" % self.name
+                }))
+                return
         elif self.flags.get('G'): # if badwords enabled
             badword = False
             for bw in self.badwords:
@@ -362,6 +373,18 @@ class Channel:
                 self.on_part(client, "error")
                 client.quit()
 
+    def message_ops(self, message):
+        """
+        Send a message to all ops on the channel
+        """
+        for client in self.clients:
+            if self.is_op(client):
+                try:
+                    client.writeline(message)
+                except:
+                    self.on_part(client, "error")
+                    client.quit()
+
     def is_op(self, client):
         """
         Checks to see if the client is an operator
@@ -400,6 +423,41 @@ class Channel:
                 "channel": self.name,
                 "message": "not an operator"
             }))
+
+
+    def add_channel_flag(self, client, flag, arg):
+        """
+        Set a channel flag
+        """
+        if self.is_op(client):
+            if flag in self.support_flags:
+                self.flags[flag] = arg
+            else:
+                pass
+        else:
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
+        self.save()
+
+    def remove_channel_flag(self, client, flag):
+        """
+        Remove a channel flag
+        """
+        if self.is_op(client):
+            if flag in self.flags:
+                del self.flags[flag]
+            else:
+                pass
+        else:
+            client.writeline(json.dumps({
+                "type": "CHANERROR",
+                "channel": self.name,
+                "message": "not an operator"
+            }))
+        self.save()
 
 
     def add_client_flag(self, client, nick, flag):

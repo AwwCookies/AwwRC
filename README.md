@@ -16,13 +16,40 @@ Connect with a client: `telnet 127.0.0.1 5050`
 - G: Enabled bad word list
 - P: Playback - Sends the last x lines to a new client joining the channel
 - B: prevents clients with the `B` (bot flag) from joining
-- R: Only registered clients can join (not implemeted)
+- R: Only registered clients can join
 
 ### User Flags
 - O: Server Operator/Server Admin/Oper
 - B: Flags the client as a bot
 - w: Allows the client to receive oper messages
-- k: Allows the client to use the `kill` command (not implemeted)
-- S: Allows the client to use SA commands e.g `sajoin` `sanick` (not implemeted)
 - i: Prevents the user from showing up on server user list (not implemented)
 - a: Marks the client as away (not implemented)
+
+### Commands
+- quit: `quit <message>` disconnects you from the server
+- nick: `nick <nick>` changes your nick
+- usernote: `usernote <nick> <message>` leave a note for a registered user while they're away
+- userflag: `userflag <add/remove> <flag>` add or remove a flag from yourself
+- chanlist: `chanlist` returns a list of all public channels (all channels if client is an oper)
+- register: `register <password> <email>` create a new account on the server
+- login: `login <password>` login to your account
+- usermsg: `usermsg <nick> <message>` send a priavte message to another client on the server
+- whois: `whois <nick>` gives you information on a client
+- chanjoin: `chanjoin <channel> [password]` join a channel
+- chanpart: `chanpart <channel> <message>` leave a channel
+- chanmsg: `chanmsg <channel> <message>` send a message to a channel
+- chankick: `chankick <channel> <nick> <reason>` removes a client from the channel **(chanop only)**
+- chanflag: `chanflag <channel> <add/remove> <flag> <args>` set a channel flag **(chanop only)**
+- chanban: `chanban <channel> <nick>` ban a client from the channel **(chanop only)**
+- chanunban: `chanunban <channel> <ip>` unban an IP from the channel **(chanop only)**
+- chanregister: `chanregister <channel>` registers a channel to you **(chanop only)**
+- chanbadword: `chanbadword <channel> <add/remove> <word>` prevents clients from sending that *word* to the channel **(chanop only)**
+- chanclientflag: `chanclientflag <channel> <add/remove> <nick> <flag>` sets a flag on client in a channel **(chanop only)**
+- chanusers: `chanusers <channel>` returns a list of all users in that channel
+- oper: `oper <password>` turns the client into an oper
+- kill: `kill <nick>` removes a client from the server **(oper only)**
+- sanick: `sanick <nick> <newnick>` forcfully change a clients nick **(oper only)**
+- sajoin: `sajoin <nick> <channel>` forcefully joins a client into a channel **(oper only)**
+- sapart: `sapart <nick> <channel>` forcefully removes a client from a channel **(oper only)**
+- serverban: `serverban <IP>` bans an IP from the server **(oper only)**
+- globalmsg: `globalmsg <message>` sends a message to all clients connected to the server **(oper only)**

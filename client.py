@@ -32,7 +32,7 @@ class Client(threading.Thread):
         self.nick = uuid.uuid4()
         self.channels = {}
         self.account = None
-        self.flags = ["B"]
+        self.flags = []
 
     def set_nick(self, client, nick):
         """
@@ -49,7 +49,7 @@ class Client(threading.Thread):
                         )
                     }))
                     self.set_nick(client, client.readline())
-            if nick not in self.server.users.keys():
+            if nick not in self.server.users.keys() and nick not in self.server.CONFIG["RESERVED_NICKS"]:
                 old_nick = str(client.nick)
                 client.nick = str(nick)
                 self.server.users[client.nick] = self
@@ -104,6 +104,24 @@ class Client(threading.Thread):
                         self.writeline(json.dumps({
                             "type": "SERVERMSG",
                             "message": "help: quit <message>"
+                        }))
+                # Command `nick`:
+                elif args[0].lower() == "nick":
+                    if len(args) > 1:
+                        self.command_nick(nick=args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: nick <nick>"
+                        }))
+                # Command `userflag`
+                elif args[0].lower() == "userflag":
+                    if len(args) > 2:
+                        self.command_set_userflag(switch=args[1], flag=args[2])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "userflag <add/remove> <flag>"
                         }))
                 # Command `chanlist`
                 elif args[0].lower() == "chanlist":
@@ -189,6 +207,16 @@ class Client(threading.Thread):
                             "type": "SERVERMSG",
                             "message": "help: chankick <channel> <nick> <reason>"
                         }))
+                # Comamnd `chanflag`
+                elif args[0] == "chanflag":
+                    if len(args) > 4:
+                        self.command_channel_flag(chan_name=args[1], switch=args[2],
+                        flag=args[3], args=' '.join(args[4:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: chanflag <channel> <add/remove> <flag> <args>"
+                        }))
                 # Command `chanban`
                 elif args[0] == "chanban":
                     if len(args) > 2:
@@ -229,7 +257,8 @@ class Client(threading.Thread):
                             "type": "SERVERMGS",
                             "message": "help: chanbadword <channel> <add/remove> <word>"
                         }))
-                elif args[0].lower() == "chanflag":
+                # Command  `chanclientflag`
+                elif args[0].lower() == "chanclientflag":
                     if len(args) > 4:
                         self.command_channel_clientflag(
                             chan_name=args[1], switch=args[2],
@@ -317,14 +346,13 @@ class Client(threading.Thread):
                         }))
                 # Command `note`
                 elif args[0].lower() == "usernote":
-                    if len(args) > 3:
-                        self.command_usernote(
-                            switch=args[1], nick=args[2],
-                            message=' '.join(args[3:]))
+                    if len(args) > 2:
+                        self.command_usernote(nick=args[1],
+                            message=' '.join(args[2:]))
                     else:
                         self.writeline(json.dumps({
                             "type": "SERVERMSG",
-                            "message": "help: usernote <send/read> <send/read: nick> <send: message>"
+                            "message": "help: usernote <nick> <message>"
                         }))
                 else:
                     self.writeline(json.dumps({
@@ -349,32 +377,55 @@ class Client(threading.Thread):
             "message": message
         }))
 
-    def command_usernote(self, nick, switch, message):
+    def command_nick(self, nick):
+        """
+        Changes the clients nick
+        """
+        self.set_nick(self, nick)
+
+    def command_set_userflag(self, switch, flag):
+        """
+        Lets the client set flags on themselves
+        """
+        allowed_flags = ['B']
+        if switch == "add":
+            if flag in allowed_flags and flag not in self.flags:
+                self.flags.append(flag)
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You set +%s on yourself" % flag
+                }))
+        elif switch == "remove":
+            if flag in self.flags:
+                self.flags.remove(flag)
+                self.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "You set -%s on yourself" % flag
+                }))
+
+    def command_usernote(self, nick, message):
         """
         Lets a client leave a note for another client
         """
-        if switch == "send":
-            account = self.server.get_account(nick)
-            if account:
-                account.get("notes").append({
-                    "from": self.nick,
-                    "message": message
-                })
-                # Save changes
-                with open("accounts/%s.json" % nick, 'w') as f:
-                    f.write(json.dumps(account,
-                    sort_keys=True, indent=4, separators=(',', ': ')))
-                self.writeline(json.dumps({
-                    "type": "SERVERMSG",
-                    "message": "You sent a note to %s" % nick
-                }))
-            else:
-                self.writeline(json.dumps({
-                    "type": "SERVERMSG",
-                    "message": "%s doesn't have an account." % nick
-                }))
-        elif switch == "read":
-            pass
+        account = self.server.get_account(nick)
+        if account:
+            account.get("notes").append({
+                "from": self.nick,
+                "message": message
+            })
+            # Save changes
+            with open("accounts/%s.json" % nick, 'w') as f:
+                f.write(json.dumps(account,
+                sort_keys=True, indent=4, separators=(',', ': ')))
+            self.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You sent a note to %s" % nick
+            }))
+        else:
+            self.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "%s doesn't have an account." % nick
+            }))
 
     def command_channel_list(self):
         """
@@ -518,6 +569,40 @@ class Client(threading.Thread):
                 "code": errorcodes.get("not in channel"),
                 "message": "You're not in %s" % chan_name
             }))
+
+    def command_channel_flag(self, chan_name, switch, flag, args=True):
+        """
+        Sets a flag in a channel
+        chan_name: name of channel you want to set the
+        flag in
+        flag: the flag you want to set
+        args: arguments for that flag
+        """
+        if args == "true":
+            args = True
+        elif args == "false":
+            args = False
+        elif args.isdigit():
+            args = int(args)
+
+        if switch == "add":
+            if chan_name in self.channels:
+                self.channels[chan_name].add_channel_flag(self, flag, args)
+            else:
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("not in channel"),
+                    "message": "You're not in %s" % chan_name
+                }))
+        elif switch == "remove":
+            if chan_name in self.channels:
+                self.channels[chan_name].remove_channel_flag(self, flag)
+            else:
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("not in channel"),
+                    "message": "You're not in %s" % chan_name
+                }))
 
     def command_channel_badword(self, chan_name, switch, badword):
         """
