@@ -165,3 +165,121 @@ Connect with a client: `telnet 127.0.0.1 5050`
     "flag": "+o"
 }
 ```
+#####*NICK*
+```
+{
+    "type": "NICK",
+    "old_nick": "cookies",
+    "new_nick": "bobby"
+}
+```
+#####*ERROR*
+```
+{
+    "type": "ERROR",
+    "code": "003",
+    "message": "invalid channel/nick"
+}
+```
+#####*PICKNICK*
+```
+{
+    "type": "PICKNICK",
+}
+```
+#####*INVALIDCOMMAND*
+```
+{
+    "type": "INVALIDCOMMAND",
+}
+```
+#####*YOUQUIT*
+```
+{
+    "type": "YOUQUIT",
+    "message": "rage quit :("
+}
+```
+#####*YOUJOIN*
+```
+{
+    "type": "YOUJOIN",
+    "channel": "#example"
+}
+```
+#####*YOUPART*
+```
+{
+    "type": "YOUPART",
+    "channel": "#example",
+    "message": "bye bye!"
+}
+```
+#####*YOUKICKED*
+```
+{
+    "type": "YOUKICKED",
+    "channel": "#example",
+    "message": "being silly"
+}
+```
+#####*YOUKILLED*
+```
+{
+    "type": "YOUKILLED",
+    "message": "bye bye!"
+}
+```
+#####*YOUBANNED*
+```
+{
+    "type": "YOUBANNED",
+    "channel": "#example"
+}
+```
+#####*YOUSAJOINED*
+```
+{
+    "type": "YOUSAJOINED",
+    "channel": "#example"
+}
+```
+#####*YOUSAPARTED*
+```
+{
+    "type": "YOUSAPARTED",
+    "channel": "#example"
+}
+```
+#####*YOUSANICKED*
+```
+{
+    "type": "YOUSANICKED",
+    "new_nick": "botbot"
+}
+```
+#####*WHOIS*
+```
+{
+    "type": "WHOIS",
+    "nick": "nilly",
+    "message": "Logged In: True"
+}
+```
+#####*NOTE*
+```
+{
+    "type": "NOTE",
+    "from": "nilly",
+    "message": "Hey dude! Message me you get this k?"
+}
+```
+#####*USERMSG*
+```
+{
+    "type": "USERMSG",
+    "nick": "nilly",
+    "ip": "127.0.0.1",
+    "message": "Hey dude! Message me you get this k?"
+}
+```

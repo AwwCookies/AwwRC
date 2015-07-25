@@ -87,8 +87,7 @@ class Client(threading.Thread):
         try:
             # client needs to change their nick
             self.writeline(json.dumps({
-                "type": "PICKNICK",
-                "message": "Please pick a nick"
+                "type": "PICKNICK"
             }))
             self.set_nick(self, self.readline())
             # Need to declare QUIT as global, since the method can change it
@@ -840,7 +839,7 @@ class Client(threading.Thread):
         """
         del self.channels[channel.name]
         self.writeline(json.dumps({
-            "type": "YOUKICK",
+            "type": "YOUKICKED",
             "channel": channel.name,
             "message": reason
         }))
@@ -850,7 +849,7 @@ class Client(threading.Thread):
         Runs when you've been banned from a channel
         """
         self.writeline(json.dumps({
-            "type": "YOUBAN",
+            "type": "YOUBANED",
             "channel": channel.name
         }))
 
@@ -861,7 +860,7 @@ class Client(threading.Thread):
         self.writeline(
             "Your nick was changed by a server admin to %s" % new_nick)
         self.writeline(json.dumps({
-            "type": "YOUSANICK",
+            "type": "YOUSANICKED",
             "new_nick": new_nick
         }))
 
@@ -914,7 +913,7 @@ class Client(threading.Thread):
         """
         self.channels[channel] = self.server.channels[channel]
         self.writeline(json.dumps({
-            "type": "YOUSAJOIN",
+            "type": "YOUSAJOINED",
             "channel": channel
         }))
 
@@ -924,7 +923,7 @@ class Client(threading.Thread):
         """
         del self.channels[channel]
         self.writeline(json.dumps({
-            "type": "YOUSAPART",
+            "type": "YOUSAPARTED",
             "channel": channel
         }))
 
