@@ -124,7 +124,7 @@ class Server:
         if client.ip in [ip.strip() for ip in open(self.CONFIG["BANLIST"], 'r').readlines()]:
             self.writeline("%s is banned." % (client.ip))
             client.writeline(
-                json.dumps({"type": "YOUSERVERBAN", "ip": client.ip}))
+                json.dumps({"type": "YOUSERVERBANNED"}))
             client.quit()
             return False
         else: # let the clinet on the server

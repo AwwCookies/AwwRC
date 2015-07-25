@@ -56,7 +56,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 
 ###Events Examples
 #####*CHANJOIN*
-```
+```json
 {
     "type": "CHANJOIN",
     "channel": "#example",
@@ -65,7 +65,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANTOPIC*
-```
+```json
 {
     "type": "CHANTOPIC",
     "channel": "#example",
@@ -73,22 +73,22 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANUSERS*
-```
+```json
 {
     "type": "CHANUSERS",
     "channel": "#example",
-    "topic": ['aww', 'mike', 'Pual']
+    "topic": ["aww", "mike", "Pual"]
 }
 ```
 #####*SERVERMSG*
-```
+```json
 {
     "type": "SERVERMSG",
     "message": "example message"
 }
 ```
 #####*CHANERROR*
-```
+```json
 {
     "type": "CHANERROR",
     "channel": "#example",
@@ -96,14 +96,14 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*YOUCHANBANNED*
-```
+```json
 {
     "type": "YOUCHANBANNED",
     "channel": "#example",
 }
 ```
 #####*CHANPART*
-```
+```json
 {
     "type": "CHANPART",
     "channel": "#example",
@@ -113,7 +113,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANKICK*
-```
+```json
 {
     "type": "CHANKICK",
     "channel": "#example",
@@ -122,7 +122,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANBAN*
-```
+```json
 {
     "type": "CHANBAN",
     "channel": "#example",
@@ -130,7 +130,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANUNBAN*
-```
+```json
 {
     "type": "CHANUNBAN",
     "channel": "#example",
@@ -138,7 +138,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*YOUCHANBANNED*
-```
+```json
 {
     "type": "YOUCHANBANNED",
     "channel": "#example",
@@ -146,7 +146,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANMSG*
-```
+```json
 {
     "type": "CHANMSG",
     "channel": "#example",
@@ -156,7 +156,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*CHANFLAG*
-```
+```json
 {
     "type": "CHANFLAG",
     "channel": "#example",
@@ -166,7 +166,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*NICK*
-```
+```json
 {
     "type": "NICK",
     "old_nick": "cookies",
@@ -174,7 +174,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*ERROR*
-```
+```json
 {
     "type": "ERROR",
     "code": "003",
@@ -182,33 +182,33 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*PICKNICK*
-```
+```json
 {
-    "type": "PICKNICK",
+    "type": "PICKNICK"
 }
 ```
 #####*INVALIDCOMMAND*
-```
+```json
 {
-    "type": "INVALIDCOMMAND",
+    "type": "INVALIDCOMMAND"
 }
 ```
 #####*YOUQUIT*
-```
+```json
 {
     "type": "YOUQUIT",
     "message": "rage quit :("
 }
 ```
 #####*YOUJOIN*
-```
+```json
 {
     "type": "YOUJOIN",
     "channel": "#example"
 }
 ```
 #####*YOUPART*
-```
+```json
 {
     "type": "YOUPART",
     "channel": "#example",
@@ -216,7 +216,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*YOUKICKED*
-```
+```json
 {
     "type": "YOUKICKED",
     "channel": "#example",
@@ -224,42 +224,42 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*YOUKILLED*
-```
+```json
 {
     "type": "YOUKILLED",
     "message": "bye bye!"
 }
 ```
 #####*YOUBANNED*
-```
+```json
 {
     "type": "YOUBANNED",
     "channel": "#example"
 }
 ```
 #####*YOUSAJOINED*
-```
+```json
 {
     "type": "YOUSAJOINED",
     "channel": "#example"
 }
 ```
 #####*YOUSAPARTED*
-```
+```json
 {
     "type": "YOUSAPARTED",
     "channel": "#example"
 }
 ```
 #####*YOUSANICKED*
-```
+```json
 {
     "type": "YOUSANICKED",
     "new_nick": "botbot"
 }
 ```
 #####*WHOIS*
-```
+```json
 {
     "type": "WHOIS",
     "nick": "nilly",
@@ -267,7 +267,7 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*NOTE*
-```
+```json
 {
     "type": "NOTE",
     "from": "nilly",
@@ -275,11 +275,58 @@ Connect with a client: `telnet 127.0.0.1 5050`
 }
 ```
 #####*USERMSG*
-```
+```json
 {
     "type": "USERMSG",
     "nick": "nilly",
     "ip": "127.0.0.1",
     "message": "Hey dude! Message me you get this k?"
+}
+```
+#####*SERVERFULL*
+```json
+{
+    "type": "SERVERFULL"
+}
+```
+#####*YOUSERVERBANNED*
+```json
+{
+    "type": "YOUSERVERBANNED"
+}
+```
+#####*SERVERMOTD*
+```json
+{
+    "type": "SERVERMOTD",
+    "message": "Welcome to AwwNet!"
+}
+```
+#####*SERVERCONFIG*
+```json
+{
+    "type": "SERVERCONFIG",
+    "config": {"PORT": "127.0.0.1"}
+}
+```
+#####*SERVERUSERS*
+```json
+{
+    "type": "SERVERUSERS",
+    "amount": 10
+}
+```
+#####*OPERMSG*
+```json
+{
+    "type": "OPERMSG",
+    "message": "Should we ban nilly?"
+}
+```
+#####*CHANLIST*
+```json
+{
+    "type": "CHANLIST",
+    "channels": ["#Aww", "#programming", "#linux"]
 }
 ```
