@@ -15,8 +15,9 @@ for x in xrange(10000):
 
     sock = socket.socket()
     sock.connect((CONFIG["address"], CONFIG["port"]))
+    time.sleep(1)
     sock.send(CONFIG["nick"])
     servmsg = sock.recv(1024)
     sock.send("register %s %s" % (fake.password(), fake.email()))
-    time.sleep(5)
+    time.sleep(1)
     sock.close()

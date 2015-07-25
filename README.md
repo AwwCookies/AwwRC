@@ -54,6 +54,7 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
 - sapart: `sapart <nick> <channel>` forcefully removes a client from a channel **(oper only)**
 - serverban: `serverban <IP>` bans an IP from the server **(oper only)**
 - globalmsg: `globalmsg <message>` sends a message to all clients connected to the server **(oper only)**
+- opermsg: `opermsg <message>` sends a message to all opers connected **(oper only)**
 
 ###Events Examples
 #####*CHANJOIN*
@@ -321,6 +322,7 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
 ```json
 {
     "type": "OPERMSG",
+    "nick": "Aww",
     "message": "Should we ban nilly?"
 }
 ```

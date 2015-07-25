@@ -54,16 +54,17 @@ class Server:
             "CHAN_BAN_LIMIT": int(config.get("CHANNEL_BAN_LIMIT", 50)),
             "CHAN_TOPIC_LIMIT": int(config.get("CHAN_TOPIC_LIMIT", 300)),
             "CHANNEL_CREATION": config.get("CHANNEL_CREATION", False),
+            "DEFAULT_CHAN_FLAGS": list(config.get("DEFAULT_CHAN_FLAGS", "n")),
             "CONNECTION_LIMIT": int(config.get("CONNECTION_LIMIT", 5)),
-            "DEFUALT_OPER_FLAGS": config.get("DEFAULT_OPER_FLAGS", ['k', 'w']),
+            "DEFUALT_OPER_FLAGS": list(config.get("DEFAULT_OPER_FLAGS", "kw")),
             "I:LINES": config.get("I:LINES", "ilines.txt"),
             "MAX_CHAN_NAME_LENGTH": int(config.get("MAX_CHAN_NAME_LENGTH", 20)),
             "MAX_NICK_LENGTH": int(config.get("MAX_NICK_LENGTH", 12)),
             "MAX_RECV_SIZE": int(config.get("MAX_RECV_SIZE", 2048)),
             "NICK_CHAR_SET": config.get("NICK_CHAR_SET", charset),
             "OPER_VHOST": config.get("OPER_VHOST", "server/admin"),
-            "PORT": config.get("PORT", 5050),
-            "RESERVED_NICKS": config.get("RESEERVED_NICKS", []),
+            "PORT": int(config.get("PORT", 5050)),
+            "RESERVED_NICKS": config.get("RESERVED_NICKS", []),
             "SERVER_ADMIN_CHANNEL": config.get("SERVER_ADMIN_CHANNEL", "&ADMIN"),
             "SERVER_MAX_USERS": int(config.get("SERVER_MAX_USERS", 100)),
             "TIMEOUT": config.get("TIMEOUT", 0.5),
@@ -223,7 +224,7 @@ class Server:
             }))
             self.writeline("%s failed to oper" % client.nick)
 
-    def oper_message(self, message):
+    def oper_message(self, client, message):
         """
         Sends a message to all opers with `w` flag
         """
@@ -231,6 +232,7 @@ class Server:
             if 'w' in oper.flags:
                 oper.writeline(json.dumps({
                     "type": "OPERMSG",
+                    "nick": client.nick,
                     "message": message
                 }))
 

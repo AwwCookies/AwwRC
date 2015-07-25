@@ -285,6 +285,15 @@ class Client(threading.Thread):
                             "type": "SERVERMSG",
                             "message": "help: oper <password>"
                         }))
+                # Command `opermsg`
+                elif args[0].lower() == "opermsg":
+                    if len(args) > 1:
+                        self.command_oper_message(message=' '.join(args[1:]))
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: opermsg <message>"
+                        }))
                 # Command `kill`
                 elif args[0].lower() == "kill":
                     if len(args) > 1:
@@ -650,6 +659,19 @@ class Client(threading.Thread):
         password: password
         """
         self.server.oper(self, hashlib.md5(password).hexdigest())
+
+    def command_oper_message(self, message):
+        """
+        Sends a message to all opers connected to the server
+        """
+        if self.is_oper():
+            self.server.oper_message(self, message)
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("not an oper"),
+                "message": "You need to be an oper to use the `kill` command"
+            }))
 
     def command_oper_kill(self, nick):
         """
