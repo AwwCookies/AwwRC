@@ -29,7 +29,7 @@ class Client(threading.Thread):
         self.client = client_sock
         self.server = server
         self.ip = self.client.getpeername()[0]  # Get the clients IP address
-        self.nick = uuid.uuid4()
+        self.nick = str(uuid.uuid4())
         self.channels = {}
         self.account = None
         self.flags = []
@@ -270,7 +270,7 @@ class Client(threading.Thread):
                 # Command `chanusers`
                 elif args[0].lower() == "chanusers":
                     if len(args) > 1:
-                        self.command_channel_members(chan_name=arg[1])
+                        self.command_channel_members(chan_name=args[1])
                     else:
                         self.writeline(json.dumps({
                             "type": "SERVERMSG",
@@ -1112,19 +1112,21 @@ class Client(threading.Thread):
         nick: nick of the client you want to message
         message: the message you want to send to that client
         """
-        if nick in self.server.users.keys():
-            self.server.users[nick].writeline(json.dumps({
-                "type": "USERMSG",
-                "nick": self.nick,
-                "ip": self.ip,
-                "message": message
-            }))
-        else:
-            self.writeline(json.dumps({
-                "type": "ERROR",
-                "code": errorcodes.get("invalid channel/nick"),
-                "message": "%s isn't on the server" % self.nick
-            }))
+        users = [(nick, nick.lower()) for nick in self.server.users.keys()]
+        for n in users:
+            if n[1] == nick.lower():
+                self.server.users[nick].writeline(json.dumps({
+                    "type": "USERMSG",
+                    "nick": self.nick,
+                    "ip": self.ip,
+                    "message": message
+                }))
+                return
+        self.writeline(json.dumps({
+            "type": "ERROR",
+            "code": errorcodes.get("invalid channel/nick"),
+            "message": "%s isn't on the server" % self.nick
+        }))
 
     def message_channel(self, channel, message):
         """

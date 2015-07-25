@@ -79,11 +79,12 @@ class Channel:
             return False
 
         if self.flags.get("B"): # no bots
-            client.writeline(json.dumps({
-                "type": "SERVERMSG",
-                "message": "%s doesn't allow bots" % self.name
-            }))
-            return False
+            if client.flags.get("B"):
+                client.writeline(json.dumps({
+                    "type": "SERVERMSG",
+                    "message": "%s doesn't allow bots" % self.name
+                }))
+                return False
 
         if self.flags.get("R"): # Registered users only
             if not client.logged_in(): # not logged in
