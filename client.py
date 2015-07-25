@@ -442,7 +442,7 @@ class Client(threading.Thread):
         email: email address of the user
         """
         hashedpw = hashlib.md5(password).hexdigest()
-        self.server.register_account(self, email, password)
+        self.server.register_account(self, email, hashedpw)
 
     def command_login(self, password):
         """

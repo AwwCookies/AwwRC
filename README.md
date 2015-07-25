@@ -5,6 +5,7 @@ Because IRC didn't have enough Aww
 Start the server: `python2 main.py`
 
 Connect with a client: `telnet 127.0.0.1 5050`
+NOTE: telnet will not work on windows. use putty with unix line endings enabled
 
 ### Channel Flags
 - n: No outside messages allowed
