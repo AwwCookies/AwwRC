@@ -32,7 +32,7 @@ class Client(threading.Thread):
         self.nick = str(uuid.uuid4())
         self.channels = {}
         self.account = None
-        self.flags = []
+        self.flags = self.server.CONFIG["DEFAULT_CLIENT_FLAGS"]
 
     def set_nick(self, client, nick):
         """

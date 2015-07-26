@@ -32,6 +32,10 @@ class Server:
         print(self.CONFIG)
         self.channels[self.CONFIG["SERVER_ADMIN_CHANNEL"]] = Channel(self,
             self.CONFIG["SERVER_ADMIN_CHANNEL"], {"O": True, "p": True}, "Server Admin Channel")
+        if not os.path.exists("accounts/"):
+            os.mkdir("accounts/", mode=0777)
+        if not os.path.exists("channels/"):
+            os.mkdir("channels/", mode=0777)
 
     def rehash(self):
         """
@@ -54,8 +58,9 @@ class Server:
             "CHAN_BAN_LIMIT": int(config.get("CHANNEL_BAN_LIMIT", 50)),
             "CHAN_TOPIC_LIMIT": int(config.get("CHAN_TOPIC_LIMIT", 300)),
             "CHANNEL_CREATION": config.get("CHANNEL_CREATION", False),
-            "DEFAULT_CHAN_FLAGS": list(config.get("DEFAULT_CHAN_FLAGS", "n")),
             "CONNECTION_LIMIT": int(config.get("CONNECTION_LIMIT", 5)),
+            "DEFAULT_CHAN_FLAGS": list(config.get("DEFAULT_CHAN_FLAGS", "n")),
+            "DEFAULT_CLIENT_FLAGS": list(config.get("DEFAULT_CLIENT_FLAGS", "i")),
             "DEFUALT_OPER_FLAGS": list(config.get("DEFAULT_OPER_FLAGS", "kw")),
             "I:LINES": config.get("I:LINES", "ilines.txt"),
             "MAX_CHAN_NAME_LENGTH": int(config.get("MAX_CHAN_NAME_LENGTH", 20)),
