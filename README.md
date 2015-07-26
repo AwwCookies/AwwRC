@@ -114,6 +114,16 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
     "message": "bye bye!"
 }
 ```
+#####*QUIT*
+```json
+{
+    "type": "QUIT",
+    "channel": "#example",
+    "nick": "nilly",
+    "ip": "127.0.0.1",
+    "message": "bye bye!"
+}
+```
 #####*CHANKICK*
 ```json
 {

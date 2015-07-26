@@ -7,6 +7,7 @@ import hashlib
 import uuid
 
 
+
 import errorcodes  # Local Import
 
 
@@ -52,6 +53,7 @@ class Client(threading.Thread):
             if nick not in self.server.users.keys() and nick not in self.server.CONFIG["RESERVED_NICKS"]:
                 old_nick = str(client.nick)
                 client.nick = str(nick)
+                del self.server.users[old_nick]
                 self.server.users[client.nick] = self
                 self.writeline(json.dumps({
                     "type": "NICK",
@@ -371,7 +373,7 @@ class Client(threading.Thread):
             return
         except Exception, err:
             print err
-            self.client.close()
+            self.quit("client error")
             return
 
 # Commands
@@ -384,7 +386,7 @@ class Client(threading.Thread):
             "type": "YOUQUIT",
             "message": message
         }))
-        self.quit()
+        self.quit(message)
 
     def command_nick(self, nick):
         """
@@ -396,7 +398,7 @@ class Client(threading.Thread):
         """
         Lets the client set flags on themselves
         """
-        allowed_flags = ['B']
+        allowed_flags = list("Bia")
         if switch == "add":
             if flag in allowed_flags and flag not in self.flags:
                 self.flags.append(flag)
@@ -837,10 +839,14 @@ class Client(threading.Thread):
         for flag in flags:
             self.remove_flag(flag)
 
-    def quit(self):
+    def quit(self, message):
         """
         Disconnects the client from the server
         """
+        for channel in self.channels:
+            self.channels[channel].on_quit(self, message)
+        self.server.clients.remove(self)
+        del self.server.users[self.nick]
         self.client.close()
         quit()
 

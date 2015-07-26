@@ -157,12 +157,18 @@ class Channel:
             "message": message
         }))
 
-    def on_quit(self, client):
+    def on_quit(self, client, message):
         """
         Runs when a client quits the server
         Currently does nothing
         """
-        pass
+        self.writeline(json.dumps({
+            "type": "QUIT",
+            "channel": self.name,
+            "nick": client.nick,
+            "ip": client.ip,
+            "message": message
+        }))
 
     def kick_user(self, client, nick, reason):
         """
