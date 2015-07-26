@@ -5,7 +5,7 @@ import time
 import json
 import hashlib
 import uuid
-
+import os
 
 
 import errorcodes  # Local Import
@@ -34,52 +34,6 @@ class Client(threading.Thread):
         self.channels = {}
         self.account = None
         self.flags = self.server.CONFIG["DEFAULT_CLIENT_FLAGS"]
-
-    def set_nick(self, client, nick):
-        """
-        Sets the clients nick
-        """
-        if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
-            for c in nick: # make sure each char in in the set
-                if not c in self.server.CONFIG["NICK_CHAR_SET"]:
-                    client.writeline(json.dumps({
-                        "type": "ERROR",
-                        "code": errorcodes.get("invalid channel/nick"),
-                        "message": "Your nick my only contain these chars: %s" % (
-                            self.server.CONFIG["NICK_CHAR_SET"]
-                        )
-                    }))
-                    self.set_nick(client, client.readline())
-            if nick not in self.server.users.keys() and nick not in self.server.CONFIG["RESERVED_NICKS"]:
-                old_nick = str(client.nick)
-                client.nick = str(nick)
-                del self.server.users[old_nick]
-                self.server.users[client.nick] = self
-                self.writeline(json.dumps({
-                    "type": "NICK",
-                    "old_nick": old_nick,
-                    "new_nick": client.nick
-                }))
-                self.server.writeline(
-                    "%s is now known as %s" % (old_nick, nick))
-            else:
-                self.writeline(json.dumps({
-                    "type": "ERROR",
-                    "code": errorcodes.get("nick in use"),
-                    "message": "%s is already in use. Please choose a new nick." % nick
-                }))
-                self.set_nick(client, client.readline())
-        else:
-            self.writeline(json.dumps({
-                "type": "ERROR",
-                "code": errorcodes.get("nick excecced limit"),
-                "message": "Your nick is too long. Please choose a nick with less than %i chars" %
-                self.server.CONFIG["MAX_NICK_LENGTH"]
-            }))
-            self.set_nick(client, client.readline())
-
-    def logged_in(self):
-        return self.account
 
     def run(self):
         '''
@@ -144,6 +98,15 @@ class Client(threading.Thread):
                         self.writeline(json.dumps({
                             "type": "SERVERMSG",
                             "message": "help: login <password>"
+                        }))
+                # Command `logout`
+                elif args[0].lower() == "logout":
+                    if self.logged_in():
+                        self.logout()
+                    else:
+                        client.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "You're not logged in."
                         }))
                 # Command `usermsg`
                 elif args[0].lower() == "usermsg":
@@ -364,6 +327,15 @@ class Client(threading.Thread):
                             "type": "SERVERMSG",
                             "message": "help: usernote <nick> <message>"
                         }))
+                # Command `setpass`
+                elif args[0].lower() == "setpass":
+                    if len(args) > 1:
+                        self.command_set_pass(password=args[1])
+                    else:
+                        self.writeline(json.dumps({
+                            "type": "SERVERMSG",
+                            "message": "help: setpass <new password>"
+                        }))
                 else:
                     self.writeline(json.dumps({
                         "type": "INVALIDCOMMAND"
@@ -445,6 +417,19 @@ class Client(threading.Thread):
         All channels if the client is an oper
         """
         self.server.channel_list(self)
+
+    def command_set_pass(self, password):
+        """
+        Change the account password
+        """
+        if self.logged_in():
+            hashedpw = hashlib.md5(password).hexdigest()
+            self.server.change_account_passwd(self, hashedpw)
+        else:
+            self.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You need to be logged in to change your password"
+            }))
 
     def command_register(self, password, email):
         """
@@ -738,6 +723,72 @@ class Client(threading.Thread):
 
 
 # End Commands
+
+    def set_nick(self, client, nick):
+        """
+        Sets the clients nick
+        """
+        self.logout()
+        if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
+            if len(nick) > 2:
+                for c in nick: # make sure each char in in the set
+                    if not c in self.server.CONFIG["NICK_CHAR_SET"]:
+                        client.writeline(json.dumps({
+                            "type": "ERROR",
+                            "code": errorcodes.get("invalid channel/nick"),
+                            "message": "Your nick my only contain these chars: %s" % (
+                                self.server.CONFIG["NICK_CHAR_SET"]
+                            )
+                        }))
+                        self.set_nick(client, client.readline())
+                        return
+                if not self.server.find_nick(nick) and nick not in self.server.CONFIG["RESERVED_NICKS"]:
+                    old_nick = str(client.nick)
+                    client.nick = str(nick)
+                    del self.server.users[old_nick]
+                    self.server.users[client.nick] = self
+                    self.writeline(json.dumps({
+                        "type": "NICK",
+                        "old_nick": old_nick,
+                        "new_nick": client.nick
+                    }))
+                    self.server.writeline(
+                        "%s is now known as %s" % (old_nick, nick))
+                else:
+                    self.writeline(json.dumps({
+                        "type": "ERROR",
+                        "code": errorcodes.get("nick in use"),
+                        "message": "%s is already in use. Please choose a new nick." % nick
+                    }))
+                    self.set_nick(client, client.readline())
+            else:
+                self.writeline(json.dumps({
+                    "type": "ERROR",
+                    "code": errorcodes.get("nick excecced limit"),
+                    "message": "Your nick is too short. Please choose a nick with more than %i chars" % 0
+                }))
+                self.set_nick(client, client.readline())
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("nick excecced limit"),
+                "message": "Your nick is too long. Please choose a nick with more than %i chars" %
+                self.server.CONFIG["MAX_NICK_LENGTH"]
+            }))
+            self.set_nick(client, client.readline())
+
+    def logged_in(self):
+        return self.account
+
+    def logout(self):
+        """
+        Logs the user out of their account
+        """
+        self.account = None
+        self.writeline(json.dumps({
+            "type": "SERVERMSG",
+            "message": "You were logged out"
+        }))
 
     def readline(self):
         """
@@ -1118,21 +1169,21 @@ class Client(threading.Thread):
         nick: nick of the client you want to message
         message: the message you want to send to that client
         """
-        users = [(nick, nick.lower()) for nick in self.server.users.keys()]
-        for n in users:
-            if n[1] == nick.lower():
-                self.server.users[nick].writeline(json.dumps({
-                    "type": "USERMSG",
-                    "nick": self.nick,
-                    "ip": self.ip,
-                    "message": message
-                }))
-                return
-        self.writeline(json.dumps({
-            "type": "ERROR",
-            "code": errorcodes.get("invalid channel/nick"),
-            "message": "%s isn't on the server" % self.nick
-        }))
+        nick = self.server.find_nick(nick)
+        if nick:
+            self.server.users[nick].writeline(json.dumps({
+                "type": "USERMSG",
+                "nick": self.nick,
+                "ip": self.ip,
+                "message": message
+            }))
+            return
+        else:
+            self.writeline(json.dumps({
+                "type": "ERROR",
+                "code": errorcodes.get("invalid channel/nick"),
+                "message": "%s isn't on the server" % self.nick
+            }))
 
     def message_channel(self, channel, message):
         """

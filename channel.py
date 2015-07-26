@@ -378,7 +378,7 @@ class Channel:
                 client.writeline(message)
             except:
                 self.on_part(client, "error")
-                client.quit()
+                client.quit("client error")
 
     def message_ops(self, message):
         """
@@ -390,7 +390,7 @@ class Channel:
                     client.writeline(message)
                 except:
                     self.on_part(client, "error")
-                    client.quit()
+                    client.quit("client error")
 
     def is_op(self, client):
         """

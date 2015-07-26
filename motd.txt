@@ -8,4 +8,4 @@ This is a sample MOTD
 Admins: Aww
 
 Rules:
-    1. There are no rules. Fuck the world 2pac swag yolo.
+    1. There are no rules.

@@ -107,6 +107,20 @@ class Server:
             for line in f.readlines():
                 yield line.split()[0]
 
+    def change_account_passwd(self, client, hashedpw):
+        """
+        Changes an account password
+        """
+        account = self.get_account(client.nick)
+        if account:
+            account["password"] = hashedpw
+            with open("accounts/%s.json" % client.nick, 'w') as f:
+                f.write(json.dumps(account))
+            client.writeline(json.dumps({
+                "type": "SERVERMSG",
+                "message": "You have succesfully changed your account password"
+            }))
+
     def register_client(self, client):
         # if the server is full tell the client and disconnect them
         if len(self.clients) >= self.CONFIG["SERVER_MAX_USERS"]:
@@ -176,6 +190,14 @@ class Server:
                 "type": "SERVERMSG",
                 "message": "Your nick is now registered! You can now login with `login <password>`"
             }))
+
+    def find_nick(self, nick):
+        """
+        Finds `nick` on the server
+        """
+        for n in [(nk, nk.lower()) for nk in self.users.keys()]:
+            if n[1] == nick.lower():
+                return n[0]
 
     def client_login(self, client, hashedpw):
         if os.path.exists("accounts/%s.json" % client.nick):
