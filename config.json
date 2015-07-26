@@ -14,6 +14,7 @@
     "MAX_CHAN_NOTE_LENGTH": 1000,
     "MAX_NICK_LENGTH": 12,
     "MAX_RECV_SIZE": 2048,
+    "MIN_NICK_LENGTH": 1,
     "NICK_CHAR_SET": "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|-",
     "OPER_VHOST": "server/admin",
     "PORT": 5050,

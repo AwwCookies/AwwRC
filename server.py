@@ -66,6 +66,7 @@ class Server:
             "MAX_CHAN_NAME_LENGTH": int(config.get("MAX_CHAN_NAME_LENGTH", 20)),
             "MAX_NICK_LENGTH": int(config.get("MAX_NICK_LENGTH", 12)),
             "MAX_RECV_SIZE": int(config.get("MAX_RECV_SIZE", 2048)),
+            "MIN_NICK_LENGTH": int(config.get("MIN_NICK_LENGTH", 1)),
             "NICK_CHAR_SET": config.get("NICK_CHAR_SET", charset),
             "OPER_VHOST": config.get("OPER_VHOST", "server/admin"),
             "PORT": int(config.get("PORT", 5050)),

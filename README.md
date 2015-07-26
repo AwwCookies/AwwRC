@@ -27,36 +27,61 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
 - a: Marks the client as away
 
 ### Commands
-- quit: `quit <message>` disconnects you from the server
-- nick: `nick <nick>` changes your nick
-- usernote: `usernote <nick> <message>` leave a note for a registered user while they're away
-- userflag: `userflag <add/remove> <flag>` add or remove a flag from yourself
-- chanlist: `chanlist` returns a list of all public channels (all channels if client is an oper)
-- register: `register <password> <email>` create a new account on the server
-- login: `login <password>` login to your account
-- logout: `logout`: logs you out of your account
-- setpass: `setpass <new password>` change your account password
-- usermsg: `usermsg <nick> <message>` send a private message to another client on the server
-- whois: `whois <nick>` gives you information on a client
-- chanjoin: `chanjoin <channel> [password]` join a channel
-- chanpart: `chanpart <channel> <message>` leave a channel
-- chanmsg: `chanmsg <channel> <message>` send a message to a channel
-- chankick: `chankick <channel> <nick> <reason>` removes a client from the channel **(chanop only)**
-- chanflag: `chanflag <channel> <add/remove> <flag> <args>` set a channel flag **(chanop only)**
-- chanban: `chanban <channel> <nick>` ban a client from the channel **(chanop only)**
-- chanunban: `chanunban <channel> <ip>` unban an IP from the channel **(chanop only)**
-- chanregister: `chanregister <channel>` registers a channel to you
-- chanbadword: `chanbadword <channel> <add/remove> <word>` prevents clients from sending that *word* to the channel **(chanop only)**
-- chanclientflag: `chanclientflag <channel> <add/remove> <nick> <flag>` sets a flag on client in a channel **(chanop only)**
-- chanusers: `chanusers <channel>` returns a list of all users in that channel
-- oper: `oper <password>` turns the client into an oper
-- kill: `kill <nick>` removes a client from the server **(oper only)**
-- sanick: `sanick <nick> <newnick>` forcfully change a clients nick **(oper only)**
-- sajoin: `sajoin <nick> <channel>` forcefully joins a client into a channel **(oper only)**
-- sapart: `sapart <nick> <channel>` forcefully removes a client from a channel **(oper only)**
-- serverban: `serverban <IP>` bans an IP from the server **(oper only)**
-- globalmsg: `globalmsg <message>` sends a message to all clients connected to the server **(oper only)**
-- opermsg: `opermsg <message>` sends a message to all opers connected **(oper only)**
+- **quit**: `quit <message>` disconnects you from the server
+- **nick**: `nick <nick>` changes your nick
+- **usernote**: `usernote <nick> <message>` leave a note for a registered user while they're away
+- **userflag**: `userflag <add/remove> <flag>` add or remove a flag from yourself
+- **chanlist**: `chanlist` returns a list of all public channels (all channels if client is an oper)
+- **register**: `register <password> <email>` create a new account on the server
+- **login**: `login <password>` login to your account
+- **logout**: `logout` logs you out of your account
+- **setpass**: `setpass <new password>` change your account password
+- **usermsg**: `usermsg <nick> <message>` send a private message to another client on the server
+- **whois**: `whois <nick>` gives you information on a client
+- **chanjoin**: `chanjoin <channel> [password]` join a channel
+- **chanpart**: `chanpart <channel> <message>` leave a channel
+- **chanmsg**: `chanmsg <channel> <message>` send a message to a channel
+- **chankick**: `chankick <channel> <nick> <reason>` removes a client from the channel **(chanop only)**
+- **chanflag**: `chanflag <channel> <add/remove> <flag> <args>` set a channel flag **(chanop only)**
+- **chanban**: `chanban <channel> <nick>` ban a client from the channel **(chanop only)**
+- **chanunban**: `chanunban <channel> <ip>` unban an IP from the channel **(chanop only)**
+- **chanregister**: `chanregister <channel>` registers a channel to you
+- **chanbadword**: `chanbadword <channel> <add/remove> <word>` prevents clients from sending that *word* to the channel **(chanop only)**
+- **chanclientflag**: `chanclientflag <channel> <add/remove> <nick> <flag>` sets a flag on client in a channel **(chanop only)**
+- **chanusers**: `chanusers <channel>` returns a list of all users in that channel
+- **oper**: `oper <password>` turns the client into an oper
+- **kill**: `kill <nick>` removes a client from the server **(oper only)**
+- **sanick**: `sanick <nick> <newnick>` forcfully change a clients nick **(oper only)**
+- **sajoin**: `sajoin <nick> <channel>` forcefully joins a client into a channel **(oper only)**
+- **sapart**: `sapart <nick> <channel>` forcefully removes a client from a channel **(oper only)**
+- **serverban**: `serverban <IP>` bans an IP from the server **(oper only)**
+- **globalmsg**: `globalmsg <message>` sends a message to all clients connected to the server **(oper only)**
+- **opermsg**: `opermsg <message>` sends a message to all opers connected **(oper only)**
+
+###Config File `config.json`
+- **ADDRESS**: The address you want to bind to. *Default*: `127.0.0.1`
+- **BANLIST**: Ban list file. *Default*: `banlist.txt`
+- **CHAN_BADWORD_LIMIT**: The max number of words that can be added to the channel bad word list. *Default*: `50`
+- **CHAN_BAN_LIMIT**: The max number of bans a channel can have set. *Default*: `50`
+- **CHAN_TOPIC_LIMIT**: The max number of chars a topic can have. *Default*: `300`
+- **CHANNEL_CREATION**: Allows clients to create new channels on the server. *Default*: `true`
+- **CONNECTION_LIMIT**: The max amount of connects the server will accept from an IP. (IPs in the ilines file bypass this limit) *Default*: `2`
+- **DEFAULT_CHAN_MODES**: Modes that will be set on a channel when it is first created. *Default*: `n`
+- **DEFAULT_CLIENT_FLAGS**: Flags that will be set on a client when they connect to the server. *Default*: `i`
+- **DEFUALT_OPER_FLAGS**: Flags that will be set when a client becomes an oper. *Default*: `kw`
+- **I:LINES**: I lines file. *Default*: `ilines.txt`
+- **MAX_CHAN_NAME_LENGTH**: The max amount of chars a channel can have. *Default*: `20`
+- **MAX_CHAN_NOTE_LENGTH**: The max amount of chars channel nots can have. (not implemented) *Default*: `1000`
+- **MAX_NICK_LENGTH**: The max amount of chars a nick can have. *Default*: `12`
+- **MAX_RECV_SIZE**: The max amount of chars the server will read at one time. *Default*: `2048`
+- **MIN_NICK_LENGTH**: The min amount of chars a nick can have. *Default*: `1`
+- **NICK_CHAR_SET**: The list of chars client nicks can have. *Default*: `0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ[]{}_|-`
+- **OPER_VHOST**: Vhost that is set when the client becomes an oper. *Default*: `server/admin`
+- **PORT**: The port that the serevr will accept clients from. *Default*: `5050`
+- **RESERVED_NICKS**: Nicks that normal clients can't use. *Default*: `[]`
+- **SERVER_ADMIN_CHANNEL**: Channel where all debuging info will go to. *Default*: `&ADMIN`
+- **SERVER_MAX_USERS**: The max amount of users that can be on the serve at one time. *Default*: `100`
+- **TIMEOUT**: Max time before the server gives up on connecting a client. *Default*: `0.5`
 
 ###Events Examples
 #####*CHANJOIN*

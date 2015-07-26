@@ -730,7 +730,7 @@ class Client(threading.Thread):
         """
         self.logout()
         if len(nick) <= self.server.CONFIG["MAX_NICK_LENGTH"]:
-            if len(nick) > 2:
+            if len(nick) > self.server.CONFIG["MIN_NICK_LENGTH"]:
                 for c in nick: # make sure each char in in the set
                     if not c in self.server.CONFIG["NICK_CHAR_SET"]:
                         client.writeline(json.dumps({
@@ -765,7 +765,8 @@ class Client(threading.Thread):
                 self.writeline(json.dumps({
                     "type": "ERROR",
                     "code": errorcodes.get("nick excecced limit"),
-                    "message": "Your nick is too short. Please choose a nick with more than %i chars" % 0
+                    "message": "Your nick is too short. Please choose a nick with more than %i chars" %
+                    self.server.CONFIG["MIN_NICK_LENGTH"]
                 }))
                 self.set_nick(client, client.readline())
         else:
@@ -896,7 +897,8 @@ class Client(threading.Thread):
         """
         for channel in self.channels:
             self.channels[channel].on_quit(self, message)
-        self.server.clients.remove(self)
+        if self in self.server.clients:
+            self.server.clients.remove(self)
         del self.server.users[self.nick]
         self.client.close()
         quit()
