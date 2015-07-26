@@ -84,6 +84,8 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
 - **TIMEOUT**: Max time before the server gives up on connecting a client. *Default*: `0.5`
 
 ###Ban List `banlist.txt`
+#####*Bans an IP from the server*
+
 To add an IP to the ban list just add one IP per line to the file
 ```
 127.0.0.1
@@ -91,14 +93,16 @@ To add an IP to the ban list just add one IP per line to the file
 ```
 
 ###I:Lines `ilines.txt`
-To add an I:Line for an IP just add one IP per line to the file. You can also add commands by putting a space after the IP
+#####*Exempts IPs from the `CONNECTION_LIMIT`*
+
+To add an I:Line for an IP just add one IP per line to the file. You can also add comments by putting a space after the IP
 ```
 127.0.0.1 this is a comment
 52.147.247.244
 ```
 
 ###MOTD `motd.txt`
-Message Of The Day
+#####*Message Of The Day*
 
 The contents of this file is sent to the client when they connect to the server.
 ```
