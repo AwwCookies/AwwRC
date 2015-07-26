@@ -111,6 +111,15 @@ Please read the rules
 1. Respect others
 ```
 
+###Opers `opers.txt`
+#####*Server Operators*
+
+To add an Oper use the add_oper.py script in scripts/ or do it by hand by adding `<IP>|<MD5 Hash of password>` to opers.txt
+```
+127.0.0.1|55e7dd3016ce4ac57b9a0f56af12f7c2
+61.42.30.68|55e7dd3016ce4ac57b9a0f56af12f7c2
+```
+
 ###Events Examples
 #####*CHANJOIN*
 ```json
