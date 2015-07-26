@@ -83,6 +83,30 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
 - **SERVER_MAX_USERS**: The max amount of users that can be on the serve at one time. *Default*: `100`
 - **TIMEOUT**: Max time before the server gives up on connecting a client. *Default*: `0.5`
 
+###Ban List `banlist.txt`
+To add an IP to the ban list just add one IP per line to the file
+```
+127.0.0.1
+32.52.225.156
+```
+
+###I:Lines `ilines.txt`
+To add an I:Line for an IP just add one IP per line to the file. You can also add commands by putting a space after the IP
+```
+127.0.0.1 this is a comment
+52.147.247.244
+```
+
+###MOTD `motd.txt`
+Message Of The Day
+
+The contents of this file is sent to the client when they connect to the server.
+```
+Welcome to AwwNet!
+Please read the rules
+1. Respect others
+```
+
 ###Events Examples
 #####*CHANJOIN*
 ```json
