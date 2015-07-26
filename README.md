@@ -34,6 +34,8 @@ NOTE: telnet will not work on windows. use putty with unix line endings enabled
 - chanlist: `chanlist` returns a list of all public channels (all channels if client is an oper)
 - register: `register <password> <email>` create a new account on the server
 - login: `login <password>` login to your account
+- logout: `logout`: logs you out of your account
+- setpass: `setpass <new password>` change your account password
 - usermsg: `usermsg <nick> <message>` send a private message to another client on the server
 - whois: `whois <nick>` gives you information on a client
 - chanjoin: `chanjoin <channel> [password]` join a channel
