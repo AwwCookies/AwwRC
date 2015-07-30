@@ -7,24 +7,26 @@ Start the server: `python2 main.py`
 Connect with a client: `telnet 127.0.0.1 5050`
 NOTE: telnet will not work on windows. use putty with unix line endings enabled
 
+###Bots
+Spearmint: https://github.com/AwwCookies/Spearmint
+
 ### Channel Flags
-- n: No outside messages allowed
-- k: Password protected channel
-- l: Limits the amount of users
-- O: Server operators only
-- F: Redirects users to another channel
-- p: Prevents the channel from showing in the public list
-- G: Enabled bad word list
-- P: Playback - Sends the last x lines to a new client joining the channel
-- B: prevents clients with the `B` (bot flag) from joining
-- R: Only registered clients can join
+- **n**: No outside messages allowed
+- **k**: Password protected channel
+- **O**: Server operators only
+- **F**: Redirects users to another channel
+- **p**: Prevents the channel from showing in the public list
+- **G**: Enabled bad word list
+- **P**: Playback - Sends the last x lines to a new client joining the channel
+- **B**: prevents clients with the `B` (bot flag) from joining
+- **R**: Only registered clients can join
 
 ### User Flags
-- O: Server Operator/Server Admin/Oper
-- B: Flags the client as a bot
-- w: Allows the client to receive oper messages
-- i: Prevents the user from showing up on server user list (not implemented)
-- a: Marks the client as away
+- **O**: Server Operator/Server Admin/Oper
+- **B: Flags the client as a bot
+- **w**: Allows the client to receive oper messages
+- **i**: Prevents the user from showing up on server user list (not implemented)
+- **a**: Marks the client as away
 
 ### Commands
 - **quit**: `quit <message>` disconnects you from the server
@@ -143,7 +145,7 @@ To add an Oper use the add_oper.py script in scripts/ or do it by hand by adding
 {
     "type": "CHANUSERS",
     "channel": "#example",
-    "topic": ["aww", "mike", "Pual"]
+    "userlist": ["aww", "mike", "Pual"]
 }
 ```
 #####*SERVERMSG*
