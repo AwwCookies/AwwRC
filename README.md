@@ -23,7 +23,7 @@ Spearmint: https://github.com/AwwCookies/Spearmint
 
 ### User Flags
 - **O**: Server Operator/Server Admin/Oper
-- **B: Flags the client as a bot
+- **B**: Flags the client as a bot
 - **w**: Allows the client to receive oper messages
 - **i**: Prevents the user from showing up on server user list (not implemented)
 - **a**: Marks the client as away
