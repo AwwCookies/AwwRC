@@ -7,11 +7,15 @@ Start the server: `python2 main.py`
 Connect with a client: `telnet 127.0.0.1 5050`
 NOTE: telnet will not work on windows. use putty with unix line endings enabled
 
+###Clients
+AwwRCClient: https://github.com/AwwCookies/AwwRCClient (Coming Soon!)
+
 ###Bots
 Spearmint: https://github.com/AwwCookies/Spearmint
 
 ### Channel Flags
 - **n**: No outside messages allowed
+- **t**: Only ops can set topic (not implemented)
 - **k**: Password protected channel
 - **O**: Server operators only
 - **F**: Redirects users to another channel
@@ -349,7 +353,7 @@ To add an Oper use the add_oper.py script in scripts/ or do it by hand by adding
 {
     "type": "NOTE",
     "from": "nilly",
-    "message": "Hey dude! Message me you get this k?"
+    "message": "Hey dude! Message me when you get this k?"
 }
 ```
 #####*USERMSG*
@@ -358,7 +362,7 @@ To add an Oper use the add_oper.py script in scripts/ or do it by hand by adding
     "type": "USERMSG",
     "nick": "nilly",
     "ip": "127.0.0.1",
-    "message": "Hey dude! Message me you get this k?"
+    "message": "Hey dude! Message me when you get this k?"
 }
 ```
 #####*SERVERFULL*
