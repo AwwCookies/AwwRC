@@ -1,11 +1,12 @@
 # AwwRC
 Because IRC didn't have enough Aww
 
+# ONLY TESTED ON GNU/LINUX (Debian Based Distros)
+
 ## How to use!
 Start the server: `python2 main.py`
 
-Connect with a client: `telnet 127.0.0.1 5050`
-NOTE: telnet will not work on windows. use putty with unix line endings enabled
+Connect with a client: `nc 127.0.0.1 5050`
 
 ###Clients
 AwwRCClient: https://github.com/AwwCookies/AwwRCClient (Coming Soon!)
