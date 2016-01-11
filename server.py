@@ -152,12 +152,18 @@ class Server:
             self.users[client.nick] = client
             self.ips.append(client.ip)
             self.writeline("%s is registered as %s" % (client.ip, client.nick))
+            client.writeline(json.dumps({
+                "type": "SERVERMOTDSTART"
+            }))
             if os.path.exists("motd.txt"):
                 for line in open("motd.txt", 'r').readlines():
                     client.writeline(json.dumps({
                         "type": "SERVERMOTD",
                         "message": line.strip("\n")
                     }))
+            client.writeline(json.dumps({
+                "type": "SERVERMOTDEND"
+            }))
             client.writeline(json.dumps({
                 "type": "SERVERCONFIG",
                 "config": self.CONFIG

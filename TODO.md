@@ -2,33 +2,34 @@
 - [ ] Improve on the GUI client
 - [ ] Add the ability to mute/unmute a user on a channel
 - [ ] Allow server admins to change the MOTD with a command
-- [x] log everything in server
+- [x] Log everything in server
 - [ ] Add unban_ip command in server.py
-- [x] make is_oper a method in client.py
-- [x] format all messages sent to a client to JSON
-- [x] implement server limit on number of users
+- [x] Make is_oper a method in client.py
+- [x] Format all messages sent to a client to JSON
+- [x] Implement server limit on number of users
 - [x] Allow opers to send messages to all users connected to the server e.g server announcements
 - [x] Allow logged in users to register a channel
 - [x] Add list command to server. This will display all public channels
 - [x] Add a private flag to channels so they can choose to not show up in the channel list
 - [x] Add the ability to limit connections by IP
 - [x] Add I:Lines to exempt an IP from a connection limit
-- [ ] implement flood control and join throttling on channels
-- [x] create a message all opers method in server.py
-- [x] whois shows user modes for opers
-- [x] whois shows channels the user is in
-- [x] add user flag `i` to hide their channels in their whois
-- [ ] vhost for logged in users
-- [x] add a badword list to channels
-- [x] implement nick/channel name restrictions
-- [x] implement getting names of all users in a channel
-- [x] convert replies in client.py to JSON
-- [x] rename server announcements to global messages
-- [x] fix sending of MOTD to client
-- [x] implement channel flag `R`
-- [x] implement channel flag `m`
-- [ ] implement user flag `i`
+- [ ] Implement flood control and join throttling on channels
+- [x] Create a message all opers method in server.py
+- [x] Whois shows user modes for opers
+- [x] Whois shows channels the user is in
+- [x] Add user flag `i` to hide their channels in their whois
+- [ ] Vhost for logged in users
+- [x] Add a badword list to channels
+- [x] Implement nick/channel name restrictions
+- [x] Implement getting names of all users in a channel
+- [x] Convert replies in client.py to JSON
+- [x] Rename server announcements to global messages
+- [x] Fix sending of MOTD to client
+- [x] Implement channel flag `R`
+- [x] Implement channel flag `m`
+- [ ] Implement user flag `i`
 - [x] Let users set notes for users when they're away `usernote send`
 - [x] Reserve nicks
 - [x] Op only messages in channels
-- [ ] Let channels restrcit to one join per IP
+- [ ] Let channels restrict to one join per IP
+- [ ] Implement channel flag `t`

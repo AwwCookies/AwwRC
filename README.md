@@ -384,6 +384,18 @@ To add an Oper use the add_oper.py script in scripts/ or do it by hand by adding
     "message": "Welcome to AwwNet!"
 }
 ```
+#####*SERVERMOTDSTART*
+```
+{
+    "type": "SERVERMOTDSTART"
+}
+```
+#####*SERVERMOTDEND*
+```
+{
+    "type": "SERVERMOTDEND"
+}
+```
 #####*SERVERCONFIG*
 ```json
 {
