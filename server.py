@@ -159,7 +159,7 @@ class Server:
                 for line in open("motd.txt", 'r').readlines():
                     client.writeline(json.dumps({
                         "type": "SERVERMOTD",
-                        "message": line.strip("\n")
+                        "message": r"%s" % line.strip("\n")
                     }))
             client.writeline(json.dumps({
                 "type": "SERVERMOTDEND"
